@@ -13,7 +13,19 @@ special u-boot for spi usage on Khadas VIMs boards based on legacy u-boot from a
 + lzma compression
 + ....
 
-## Status 
+## build from sources
+
+preparing ... plz wait soon ...
+
+## Downloads
+
+https://github.com/hyphop/khadas-uboot-spi/releases
+
++ https://github.com/hyphop/khadas-uboot-spi/releases/download/test/u-boot.sd.bin.gz - spi version
++ https://github.com/hyphop/khadas-uboot-spi/releases/download/test/u-boot.sd.bin.gz - sd version for delelopers test
+
+
+## Status
 
 experemental
 
