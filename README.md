@@ -24,6 +24,15 @@ https://github.com/hyphop/khadas-uboot-spi/releases
 + https://github.com/hyphop/khadas-uboot-spi/releases/download/test/u-boot.spi.bin.gz - spi version
 + https://github.com/hyphop/khadas-uboot-spi/releases/download/test/u-boot.sd.bin.gz - sd version for delelopers test
 
+## spi usage 
+
+for spi usage u can use this link https://github.com/hyphop/khadas-rescue for build full spi images
+
+## related projects
+
++ https://github.com/hyphop/khadas-rescue
++ https://github.com/hyphop/khadas-openwrt
++ https://github.com/hyphop/khadas-linux-kernel
 
 ## Status
 
