@@ -17,12 +17,13 @@ special u-boot for spi usage on Khadas VIMs boards based on legacy u-boot from a
 
 preparing ... plz wait soon ...
 
+## scripts
+
++ [scripts](scripts)
+
 ## Downloads
 
 https://github.com/hyphop/khadas-uboot-spi/releases
-
-+ https://github.com/hyphop/khadas-uboot-spi/releases/download/test/u-boot.spi.bin.gz - spi version
-+ https://github.com/hyphop/khadas-uboot-spi/releases/download/test/u-boot.sd.bin.gz - sd version for delelopers test
 
 ## spi usage 
 

@@ -1,0 +1,66 @@
+#!/bin/sh
+
+## hyphop ##
+
+#= build wrapper for mailline uboot
+
+#/ menuconfig
+#  savedefconfig
+#  -j14
+
+set -e
+
+export PATH=$PWD/build/toolchains/gcc-linaro-aarch64-linux-gnu/bin:$PATH
+export ARCH=arm64
+export CROSS_COMPILE=aarch64-linux-gnu-
+
+CMD(){
+    echo "[#] $@">&2
+    "$@"
+}
+
+for DIR in ../../fenix/build/u-boot-mainline-*; do
+    [ -d "$DIR" ] && break
+done
+
+
+CMD make -C "$DIR" "$@"
+
+F=/tmp/uboot-aml
+
+[ -d $F ] && rm -rd $F
+[ -d $F ] || mkdir $F
+
+
+cp ../../fenix/packages/u-boot-mainline/fip/VIM2/* $F
+cp $DIR/u-boot.bin $F/bl33.bin
+
+#ls -l1 $F
+#ls -l1 $DIR/u-boot.bin
+
+P=$PWD
+
+cd $F
+(
+	./blx_fix.sh ./bl30.bin ./zero_tmp ./bl30_zero.bin ./bl301.bin ./bl301_zero.bin ./bl30_new.bin bl30
+	python ./acs_tool.pyc ./bl2.bin ./bl2_acs.bin ./acs.bin 0
+	./blx_fix.sh ./bl2_acs.bin ./zero_tmp ./bl2_zero.bin ./bl21.bin ./bl21_zero.bin ./bl2_new.bin bl2
+	./aml_encrypt_gxl --bl3enc --input ./bl30_new.bin
+	./aml_encrypt_gxl --bl3enc --input ./bl31.img
+	./aml_encrypt_gxl --bl3enc --input ./bl33.bin
+	./aml_encrypt_gxl --bl2sig --input ./bl2_new.bin --output ./bl2.n.bin.sig
+	./aml_encrypt_gxl --bootmk --output ./u-boot.bin --bl2 ./bl2.n.bin.sig --bl30 ./bl30_new.bin.enc --bl31 ./bl31.img.enc --bl33 ./bl33.bin.enc
+) >/dev/null 2>/dev/null 
+
+mv u-boot.bin u-boot.spi.bin
+mv u-boot.bin.sd.bin u-boot.sd.bin
+rm bl* a* *.tpl *.bl2
+
+for b in *.bin; do
+    gzip -c $b > $b.gz
+done
+
+echo "[i] output: $F">&2
+ls -l1 $F
+
+
