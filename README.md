@@ -13,10 +13,19 @@ special u-boot for spi usage on Khadas VIMs boards based on legacy u-boot from a
 + lzma compression
 + ....
 
-## build from sources
+## usage & install
 
-preparing ... plz wait soon ...
+just put on same dir level as fenix https://github.com/khadas/fenix
 
+```
+git clone https://github.com/khadas/fenix
+# prepare source
+git clone https://github.com/hyphop/khadas-uboot-spi
+cd khadas-uboot-spi/scripts
+# build mainline uboot
+./make_uboot_mainline_vim2
+
+```
 ## scripts
 
 + [scripts](scripts)
@@ -34,6 +43,7 @@ for spi usage u can use this link https://github.com/hyphop/khadas-rescue for bu
 + https://github.com/hyphop/khadas-rescue
 + https://github.com/hyphop/khadas-openwrt
 + https://github.com/hyphop/khadas-linux-kernel
++ https://github.com/khadas/fenix
 
 ## Status
 
