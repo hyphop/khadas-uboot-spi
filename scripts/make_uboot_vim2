@@ -10,30 +10,34 @@
 
 set -e
 
-export PATH=$(realpath $PWD/../../fenix/build/toolchains/gcc-linaro-aarch64-linux-gnu/bin):$PATH
+export PATH=$PWD/../../fenix/build/toolchains/gcc-linaro-aarch64-none-elf/bin:$PATH
+export PATH=$PWD/../../fenix/build/toolchains/gcc-arm-none-eabi/bin:$PATH
+
 export ARCH=arm64
-export CROSS_COMPILE=aarch64-linux-gnu-
+export CROSS_COMPILE=aarch64-none-elf-
 
 CMD(){
     echo "[#] $@">&2
     "$@"
 }
 
-for DIR in ../../fenix/build/u-boot-mainline-*; do
+for DIR in ../../fenix/u-boot; do
     [ -d "$DIR" ] && break
 done
 
+[ -f $DIR/build/.config ] || {
+    CMD make -C "$DIR" kvim2_defconfig
+}
 
 CMD make -C "$DIR" "$@"
 
-F=/tmp/uboot-aml
+F=/tmp/uboot-legacy-aml
 
 [ -d $F ] && rm -rd $F
 [ -d $F ] || mkdir $F
 
-
 cp ../../fenix/packages/u-boot-mainline/fip/VIM2/* $F
-cp $DIR/u-boot.bin $F/bl33.bin
+cp $DIR/build/u-boot.bin $F/bl33.bin
 
 #ls -l1 $F
 #ls -l1 $DIR/u-boot.bin

@@ -20,6 +20,8 @@ just put on same dir level as fenix https://github.com/khadas/fenix
 ```
 git clone https://github.com/khadas/fenix
 # prepare source
+# source source env/setenv.sh
+# make uboot
 git clone https://github.com/hyphop/khadas-uboot-spi
 cd khadas-uboot-spi/scripts
 # build mainline uboot
