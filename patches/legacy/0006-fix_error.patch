@@ -1,0 +1,25 @@
+From d164175a4b35e57cbf3bc7570b747bb7a6d487f4 Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Sat, 17 Aug 2019 10:34:49 +0300
+Subject: [PATCH 6/8] fix_error
+
+---
+ board/khadas/aml_booted_from.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+index 6c615e007d..86469159e3 100644
+--- a/board/khadas/aml_booted_from.c
++++ b/board/khadas/aml_booted_from.c
+@@ -61,7 +61,7 @@ fdt addr $dtb_mem_addr && echo DTB activated\n\
+ echo sf read $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
+ sf read $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
+ echo script readed from sf\n\
+-setenv bootcmd \"$POST_HOOK; $script $SCRIPT_ADDR; sleep 1\"\n\
++setenv bootcmd \"$POST_HOOK; script $SCRIPT_ADDR; sleep 1\"\n\
+ "
+ ,-1,0);
+ }
+-- 
+2.14.1
+

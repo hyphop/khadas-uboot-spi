@@ -1,0 +1,86 @@
+From 7d348d5e034b78f59f68d0ea264eba261854af07 Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Fri, 16 Aug 2019 22:48:46 +0300
+Subject: [PATCH 3/8] spi_full_load_fix
+
+---
+ board/khadas/aml_booted_from.c | 66 ++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 57 insertions(+), 9 deletions(-)
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+index 34cec50735..6534822f4c 100644
+--- a/board/khadas/aml_booted_from.c
++++ b/board/khadas/aml_booted_from.c
+@@ -7,12 +7,60 @@
+ 
+ */
+ 
+-		char BOOTED[5];
+-		//  0   1    2    3   4  5
+-		//  res emmc nand spi sd usb // read this magic register
+-		char booted=readl(AO_SEC_GP_CFG0) & 0xf;
+-		sprintf(BOOTED, "%s",
+-		booted == 4 ? "sd" : booted == 3 ? "spi" : booted == 1 ? "emmc" : ""
+-		);
+-		printf("[i] uboot BOOTED from: %u - %s\n", booted, BOOTED);
+-		setenv("BOOTED", BOOTED );
++	char BOOTED[5];
++	//  0   1    2    3   4  5
++	//  res emmc nand spi sd usb // read this magic register
++	char booted=readl(AO_SEC_GP_CFG0) & 0xf;
++	sprintf(BOOTED, "%s",
++	booted == 4 ? "sd" : booted == 3 ? "spi" : booted == 1 ? "emmc" : ""
++	);
++	printf("[i] uboot BOOTED from: %u - %s\n", booted, BOOTED);
++	setenv("BOOTED", BOOTED );
++	setenv("dhcp_boot", "dhcp; tftp 1000000 boot.scr; script 1000000 || source 1000000" );
++
++// boot from spi
++if ( booted == 3 ) {
++run_command_list("\n\
++setenv DTB_SIZHEX	0x020000\n\
++setenv DTB_OFFHEX	0x140000\n\
++setenv SCRIPT_SIZHEX	0x008000\n\
++setenv SCRIPT_OFFHEX	0x160000\n\
++setenv SCRIPT_ADDR 	0x50000000\n\
++## sf read dtb\n\
++sf probe 0 104000000\n\
++echo sf read $dtb_mem_addr $DTB_OFFHEX $DTB_SIZHEX\n\
++sf read $dtb_mem_addr $DTB_OFFHEX $DTB_SIZHEX\n\
++fdt addr $dtb_mem_addr\n\
++echo dtb readed from sf\n\
++\n\
++## sf read boot script\n\
++echo sf read $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
++sf read $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
++echo script readed from sf\n\
++setenv bootcmd \"script $SCRIPT_ADDR; sleep 1\"\n\
++"
++,-1,0);
++}
++
++// boot from not sd
++if ( booted != 4 ) {
++run_command_list("\n\
++setenv SCRIPT_ADDR 0x50000000\n\
++setenv BOOT_HOOK /rescue/hook.scr\n\
++setenv POST_HOOK \"script $SCRIPT_ADDR || source $SCRIPT_ADDR; sleep 1\"\n\
++if fatload mmc 0 $SCRIPT_ADDR $BOOT_HOOK; then\n\
++    echo find boot hook $BOOT_HOOK\n\
++    setenv bootcmd2 $bootcmd\n\
++    setenv bootcmd $POST_HOOK\n\
++    exit 0\n\
++fi\n\
++if ext4load mmc 0 $SCRIPT_ADDR $BOOT_HOOK; then\n\
++    echo find boot hook $BOOT_HOOK\n\
++    setenv bootcmd2 $bootcmd\n\
++    setenv bootcmd $POST_HOOK\n\
++    exit 0\n\
++fi\n\
++"
++,-1,0);
++}
++
+-- 
+2.14.1
+

@@ -1,0 +1,392 @@
+From 88500c4aec2dc7c74af584db1898f9e58cd087bc Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Fri, 16 Aug 2019 21:23:31 +0300
+Subject: [PATCH 1/8] spi_prep
+
+---
+ board/khadas/aml_booted_from.c |  18 ++++
+ board/khadas/kvim/kvim.c       |   2 +
+ board/khadas/kvim2/kvim2.c     |   2 +
+ board/khadas/kvim2l/kvim2l.c   |   2 +
+ common/Makefile                |   3 +
+ common/cmd_bootm.c             |   5 +-
+ common/cmd_script.c            | 212 +++++++++++++++++++++++++++++++++++++++++
+ common/cmd_script.md           |  51 ++++++++++
+ 8 files changed, 294 insertions(+), 1 deletion(-)
+ create mode 100644 board/khadas/aml_booted_from.c
+ create mode 100644 common/cmd_script.c
+ create mode 100644 common/cmd_script.md
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+new file mode 100644
+index 0000000000..34cec50735
+--- /dev/null
++++ b/board/khadas/aml_booted_from.c
+@@ -0,0 +1,18 @@
++/*
++
++## hyphop ##
++
++#= detect amlogic boot source from special register
++#/ insert next lines after => int board_late_init(void)
++
++*/
++
++		char BOOTED[5];
++		//  0   1    2    3   4  5
++		//  res emmc nand spi sd usb // read this magic register
++		char booted=readl(AO_SEC_GP_CFG0) & 0xf;
++		sprintf(BOOTED, "%s",
++		booted == 4 ? "sd" : booted == 3 ? "spi" : booted == 1 ? "emmc" : ""
++		);
++		printf("[i] uboot BOOTED from: %u - %s\n", booted, BOOTED);
++		setenv("BOOTED", BOOTED );
+diff --git a/board/khadas/kvim/kvim.c b/board/khadas/kvim/kvim.c
+index fed01c40a0..4ee88ac816 100644
+--- a/board/khadas/kvim/kvim.c
++++ b/board/khadas/kvim/kvim.c
+@@ -523,6 +523,8 @@ int check_vref(void)
+ 
+ int board_late_init(void){
+ 
++#include "../aml_booted_from.c"
++
+ 	run_command("if itest ${firstboot} == 1; then "\
+ 			"defenv_reserv;setenv firstboot 1; setenv upgrade_step 2; saveenv; fi;", 0);
+ 	//update env before anyone using it
+diff --git a/board/khadas/kvim2/kvim2.c b/board/khadas/kvim2/kvim2.c
+index 2a5a49f60f..bf48746475 100644
+--- a/board/khadas/kvim2/kvim2.c
++++ b/board/khadas/kvim2/kvim2.c
+@@ -452,6 +452,8 @@ U_BOOT_CMD(hdmi_init, CONFIG_SYS_MAXARGS, 0, do_hdmi_init,
+ int board_late_init(void){
+ 	int ret;
+ 
++#include "../aml_booted_from.c"
++
+ 	run_command("if itest ${firstboot} == 1; then "\
+ 			"defenv_reserv;setenv firstboot 1; setenv upgrade_step 2; saveenv; fi;", 0);
+ 	//update env before anyone using it
+diff --git a/board/khadas/kvim2l/kvim2l.c b/board/khadas/kvim2l/kvim2l.c
+index 66aa1684be..202e028996 100644
+--- a/board/khadas/kvim2l/kvim2l.c
++++ b/board/khadas/kvim2l/kvim2l.c
+@@ -451,6 +451,8 @@ U_BOOT_CMD(hdmi_init, CONFIG_SYS_MAXARGS, 0, do_hdmi_init,
+ int board_late_init(void){
+ 	int ret;
+ 
++#include "../aml_booted_from.c"
++
+ 	run_command("if itest ${firstboot} == 1; then "\
+ 			"defenv_reserv;setenv firstboot 1; setenv upgrade_step 2; saveenv; fi;", 0);
+ 	//update env before anyone using it
+diff --git a/common/Makefile b/common/Makefile
+index 3dad1ef65f..735e16ff01 100644
+--- a/common/Makefile
++++ b/common/Makefile
+@@ -324,3 +324,6 @@ obj-$(CONFIG_AML_LCD) += cmd_lcd.o
+ obj-$(CONFIG_CMD_RSVMEM) += cmd_rsvmem.o
+ obj-$(CONFIG_CMD_CHIPID) += cmd_chipid.o
+ CFLAGS_env_embedded.o := -Wa,--no-warn -DENV_CRC=$(shell tools/envcrc 2>/dev/null)
++
++# extra commands
++obj-y += cmd_script.o
+diff --git a/common/cmd_bootm.c b/common/cmd_bootm.c
+index 0abf7bca9f..d6f611ad11 100644
+--- a/common/cmd_bootm.c
++++ b/common/cmd_bootm.c
+@@ -139,12 +139,15 @@ int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ 		//printf("aml log : addr = 0x%x\n",nLoadAddr);
+ 	}
+ 
+-	int nRet = aml_sec_boot_check(AML_D_P_IMG_DECRYPT,nLoadAddr,GXB_IMG_SIZE,GXB_IMG_DEC_ALL);
++	int nRet;
++	if ( 0 ) { // removed by hyphop
++	nRet = aml_sec_boot_check(AML_D_P_IMG_DECRYPT,nLoadAddr,GXB_IMG_SIZE,GXB_IMG_DEC_ALL);
+ 	if (nRet)
+ 	{
+ 		printf("\naml log : Sig Check %d\n",nRet);
+ 		return nRet;
+ 	}
++	}
+ 
+ 	ee_gate_off();
+ 	nRet = do_bootm_states(cmdtp, flag, argc, argv, BOOTM_STATE_START |
+diff --git a/common/cmd_script.c b/common/cmd_script.c
+new file mode 100644
+index 0000000000..c965b3f635
+--- /dev/null
++++ b/common/cmd_script.c
+@@ -0,0 +1,212 @@
++
++// ## hyphop ## for khadas
++
++/*
++
++## script
++
++simple plain script run from mem without mkimage wrappers
++
++`script` is cool alternative for `autoscript` and `source` , we can
++ use one `script` command for plain script and wrapped scripts!
++
+++ https://github.com/hyphop/uboot-extra
+++ https://raw.githubusercontent.com/hyphop/uboot-extra/master/cmd_script.c
++
++## sintax and parsing
++
++```
++#!script - script must begin from this marker
++##END##  - its end marker - after this lines all strings ignored
++'\0'     - its same end marker
++72bytes  - mkimage header parsed 
++
++```
++
++script parsed by run_command_list
++
++## how to install it 
++
++just add next line to Makefile
++
++    obj-y += cmd_script.o
++
++## uboot usage
++
++    script [addr|check] [bytes] [nochk] [silent] - run script starting at addr
++        bytes - read bytes (hex) limit
++        nochk - no check #!script header
++        silent - be silent
++
++    script check && echo ok # check script cmd
++
++## uboot usage  examples
++
++    script 0x1000000				- simple run from addr 0x1000000
++    script 0x1000000 32 			- same but only fist 32 bytes
++    script 0x1000000 $filesize 			- same but limited by file size value 
++    script 0x1000000 $filesize nochk 		- same but without $!script header check
++    script 0x1000000 $filesize nochk silent	- same but silent
++
++    # tftp script usage
++    ADDR=0x1000000; tftp $ADDR test.script && script $ADDR $filesize 
++
++    # usage as files
++    ADDR=100000; ext4load mmc 1:5 $ADDR dhcp.cmd_test.script; script $ADDR $filesize
++
++    # spi flash usage
++    ADDR=100000; sf read $ADDR $SCRIPT_OFFSET $SCRIPT_BYTES; script $ADDR
++
++*/
++
++
++#include <common.h>
++#include <command.h>
++#include <image.h>
++#include <malloc.h>
++#include <asm/byteorder.h>
++
++int
++script (ulong addr , unsigned leng,  unsigned hdr_chk , unsigned silent)
++{
++	unsigned  len = leng;
++	void *buf;
++	
++	buf = map_sysmem(addr, 0);
++	
++	char *data;
++	char *n;
++	
++	data = (char *)buf;
++	n = data;
++
++// simple mkimage header parser
++	if ( *(n+0) == 0x27 &&
++	     *(n+1) == 0x05 &&
++	     *(n+2) == 0x19 &&
++	     *(n+3) == 0x56
++	     ) {
++
++//	size calculate
++	    unsigned int l = (*(n+14))*256 + *(n+15);
++
++	    if ( l > 8 ) l-=8;
++//	fix offest
++	    data+=72;
++	    hdr_chk=0;
++
++	    if (!silent)
++		printf ("[w] mkimage Script a:%08lx l:%u - s:%u\n", addr, len, l) ;
++
++//	fix len
++	    len=l;
++
++	}
++	
++// simple script header parser
++	if ( hdr_chk ) {
++	if ( *n++ == '#' &&
++	     *n++ == '!' &&
++	     *n++ == 's' &&
++	     *n++ == 'c' &&
++	     *n++ == 'r' &&
++	     *n++ == 'i' &&
++	     *n++ == 'p' &&
++	     *n++ == 't' ) {
++	} else {
++		if (!silent)
++		    printf ("[w] Script a:%08lx l:%u c:%u - wrong header!\n", addr, len, hdr_chk ) ;
++
++		return -1;
++
++	}
++	}
++
++	if (len < 1) {
++	    len = 1024*32;
++	}
++
++	char a = *(data + len);
++
++	*(data + len) = '\0';
++
++	char *p = strstr( data , "\n##END##" );
++	
++	if (p != NULL) {
++	    *(data + len) = a;
++	    len = p - data;
++	} else {
++	    int i = 0;
++	    while ( *n++ != '\0' ) {
++		if ( i++ >= len ) break;
++	    }
++	    *(data + len) = a;
++	    len = n - data; //len = i;
++	}
++
++	len--;
++
++	if (!silent)
++	    printf ("[#] Script a:%08lx l:%u c:%u s:%u - run\n", addr, len, hdr_chk, silent ) ;
++
++	return run_command_list(data, len, 0);
++
++//	unmap_sysmem(buf);
++
++	return 0;
++
++
++}
++
++/**************************************************/
++
++int do_script (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
++{
++	ulong addr;
++	int rcode;
++
++	if ( argc < 2 )  {
++	    printf ("[e] not defined addr\n");
++	    return -1;
++	}
++
++	unsigned leng;
++
++	char *n;
++	n = (char *)argv[1];
++
++	// just check
++	//$ script check && echo ok
++	//printf ("[i] args %s %s\n", argv[1], n);
++
++	if ( *n++  == 'c' && 
++	     *n++  == 'h' &&
++	    1
++	    ) {
++	    return 0;
++	}
++
++	addr = simple_strtoul(argv[1], NULL, 16);
++	if ( argc < 3 )  {
++	    leng = 65536/2;
++	} else { 
++	    leng = simple_strtoul(argv[2], NULL, 16);
++	}
++
++	rcode = script (addr , leng , 
++		argc > 3 ? 0 : 1,
++		argc > 4 ? 1 : 0
++	);
++
++	 
++	return rcode;
++}
++
++U_BOOT_CMD(
++	script, 5, 0,	do_script,
++	"# run plain script from memory",
++	"[addr|check] [bytes] [nochk] [silent] - run script starting at addr\n"
++	"	bytes - read bytes (hex) limit\n"
++	"	nochk - no check #!script header\n"
++	"	silent - be silent\n"
++);
+diff --git a/common/cmd_script.md b/common/cmd_script.md
+new file mode 100644
+index 0000000000..5650e0f475
+--- /dev/null
++++ b/common/cmd_script.md
+@@ -0,0 +1,51 @@
++## script
++
++simple plain script run from mem without mkimage wrappers
++
++`script` is cool alternative for `autoscript` and `source` , we can
++ use one `script` command for plain script and wrapped scripts!
++
+++ https://github.com/hyphop/uboot-extra
+++ https://raw.githubusercontent.com/hyphop/uboot-extra/master/cmd_script.c
++
++## sintax and parsing
++
++```
++#!script - script must begin from this marker
++##END##  - its end marker - after this lines all strings ignored
++'\0'     - its same end marker
++72bytes  - mkimage header parsed 
++
++```
++
++script parsed by run_command_list
++
++## how to install it 
++
++just add next line to Makefile
++
++    obj-y += cmd_script.o
++
++## uboot usage
++
++    script [addr] [bytes] [nochk] [silent] - run script starting at addr
++        bytes - read bytes (hex) limit
++        nochk - no check #!script header
++        silent - be silent
++
++## uboot usage  examples
++
++    script 0x1000000				- simple run from addr 0x1000000
++    script 0x1000000 32 			- same but only fist 32 bytes
++    script 0x1000000 $filesize 			- same but limited by file size value 
++    script 0x1000000 $filesize nochk 		- same but without $!script header check
++    script 0x1000000 $filesize nochk silent	- same but silent
++
++    # tftp script usage
++    ADDR=0x1000000; tftp $ADDR test.script && script $ADDR $filesize 
++
++    # usage as files
++    ADDR=100000; ext4load mmc 1:5 $ADDR dhcp.cmd_test.script; script $ADDR $filesize
++
++    # spi flash usage
++    ADDR=100000; sf read $ADDR $SCRIPT_OFFSET $SCRIPT_BYTES; script $ADDR
+-- 
+2.14.1
+

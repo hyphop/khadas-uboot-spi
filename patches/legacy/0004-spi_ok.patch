@@ -1,0 +1,93 @@
+From 1d074aca33583ffe6dbcd53ff2b65bbe0a62654f Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Sat, 17 Aug 2019 08:46:08 +0300
+Subject: [PATCH 4/8] spi_ok
+
+---
+ board/khadas/aml_booted_from.c | 48 ++++++++++++++++++++++--------------------
+ board/khadas/configs/kvim2.h   |  1 +
+ 2 files changed, 26 insertions(+), 23 deletions(-)
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+index 6534822f4c..9da9a54515 100644
+--- a/board/khadas/aml_booted_from.c
++++ b/board/khadas/aml_booted_from.c
+@@ -18,6 +18,29 @@
+ 	setenv("BOOTED", BOOTED );
+ 	setenv("dhcp_boot", "dhcp; tftp 1000000 boot.scr; script 1000000 || source 1000000" );
+ 
++// boot from not sd
++if ( booted != 4 ) {
++run_command_list("\n\
++setenv HOOK_ADDR 0x60000000\n\
++setenv BOOT_HOOK /rescue/hook.scr\n\
++setenv POST_HOOK \"script $HOOK_ADDR || source $HOOK_ADDR; sleep 1\"\n\
++if fatload mmc 0 $HOOK_ADDR $BOOT_HOOK; then\n\
++    echo find boot hook $BOOT_HOOK\n\
++    setenv bootcmd2 $bootcmd\n\
++    setenv bootcmd $POST_HOOK\n\
++    exit 0\n\
++fi\n\
++if ext4load mmc 0 $HOOK_ADDR $BOOT_HOOK; then\n\
++    echo find boot hook $BOOT_HOOK\n\
++    setenv bootcmd2 $bootcmd\n\
++    setenv bootcmd $POST_HOOK\n\
++    exit 0\n\
++fi\n\
++setenv BOOT_HOOK\n\
++"
++,-1,0);
++}
++
+ // boot from spi
+ if ( booted == 3 ) {
+ run_command_list("\n\
+@@ -30,8 +53,8 @@ setenv SCRIPT_ADDR 	0x50000000\n\
+ sf probe 0 104000000\n\
+ echo sf read $dtb_mem_addr $DTB_OFFHEX $DTB_SIZHEX\n\
+ sf read $dtb_mem_addr $DTB_OFFHEX $DTB_SIZHEX\n\
+-fdt addr $dtb_mem_addr\n\
+-echo dtb readed from sf\n\
++echo fdt addr $dtb_mem_addr\n\
++fdt addr $dtb_mem_addr && echo DTB activated\n\
+ \n\
+ ## sf read boot script\n\
+ echo sf read $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
+@@ -42,25 +65,4 @@ setenv bootcmd \"script $SCRIPT_ADDR; sleep 1\"\n\
+ ,-1,0);
+ }
+ 
+-// boot from not sd
+-if ( booted != 4 ) {
+-run_command_list("\n\
+-setenv SCRIPT_ADDR 0x50000000\n\
+-setenv BOOT_HOOK /rescue/hook.scr\n\
+-setenv POST_HOOK \"script $SCRIPT_ADDR || source $SCRIPT_ADDR; sleep 1\"\n\
+-if fatload mmc 0 $SCRIPT_ADDR $BOOT_HOOK; then\n\
+-    echo find boot hook $BOOT_HOOK\n\
+-    setenv bootcmd2 $bootcmd\n\
+-    setenv bootcmd $POST_HOOK\n\
+-    exit 0\n\
+-fi\n\
+-if ext4load mmc 0 $SCRIPT_ADDR $BOOT_HOOK; then\n\
+-    echo find boot hook $BOOT_HOOK\n\
+-    setenv bootcmd2 $bootcmd\n\
+-    setenv bootcmd $POST_HOOK\n\
+-    exit 0\n\
+-fi\n\
+-"
+-,-1,0);
+-}
+ 
+diff --git a/board/khadas/configs/kvim2.h b/board/khadas/configs/kvim2.h
+index 1d7713fe90..3b7a295b1f 100644
+--- a/board/khadas/configs/kvim2.h
++++ b/board/khadas/configs/kvim2.h
+@@ -580,3 +580,4 @@
+ #define CONFIG_CMD_LZMADEC	1
+ #define CONFIG_LZMA 1
+ #define CONFIG_BZIP2 1
++#define CONFIG_ENV_SPI_MAX_HZ 104000000
+-- 
+2.14.1
+

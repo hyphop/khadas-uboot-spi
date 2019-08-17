@@ -1,0 +1,134 @@
+From f65b795c372ab7732c34493c2660dffb3f135cf3 Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Sat, 17 Aug 2019 17:16:48 +0300
+Subject: [PATCH 7/8] reoderd
+
+---
+ board/khadas/aml_booted_from.c | 52 ++++++++++++++++++++++++------------------
+ board/khadas/configs/kvim2.h   |  8 +++----
+ 2 files changed, 34 insertions(+), 26 deletions(-)
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+index 86469159e3..6abed7b0b9 100644
+--- a/board/khadas/aml_booted_from.c
++++ b/board/khadas/aml_booted_from.c
+@@ -2,11 +2,27 @@
+ 
+ ## hyphop ##
+ 
++#=	special hooks 
+ #= detect amlogic boot source from special register
+ #/ insert next lines after => int board_late_init(void)
+ 
+ */
+ 
++run_command_list("\n\
++# default rescue init envs\n\
++setenv HOOK_ADDR        0x31000000\n\
++setenv SCRIPT_ADDR      0x33000000\n\
++setenv NETSCR_ADDR      0x34000000\n\
++setenv DTB_ADDR         0x1000000\n\
++setenv DTB_SIZHEX       0x020000\n\
++setenv DTB_OFFHEX       0x140000\n\
++setenv SCRIPT_SIZHEX    0x008000\n\
++setenv SCRIPT_OFFHEX    0x160000\n\
++setenv dhcp_boot        \"dhcp; tftp $NETSCR_ADDR boot.scr; script $NETSCR_ADDR || source $NETSCR_ADDR\"\n\
++setenv dhcp_loop	\"while true; do; run dhcp_boot; sleep 1; done\"\n\
++",-1,0);
++
++
+ 	char BOOTED[5];
+ 	//  0   1    2    3   4  5
+ 	//  res emmc nand spi sd usb // read this magic register
+@@ -16,54 +32,46 @@
+ 	);
+ 	printf("[i] uboot BOOTED from: %u - %s\n", booted, BOOTED);
+ 	setenv("BOOTED", BOOTED );
+-	setenv("dhcp_boot", "dhcp; tftp 1000000 boot.scr; script 1000000 || source 1000000" );
++
+ 
+ // boot from not sd
+ if ( booted != 4 ) {
+ run_command_list("\n\
+-setenv HOOK_ADDR 0x60000000\n\
+ setenv BOOT_HOOK /rescue/hook.scr\n\
+ setenv POST_HOOK \"script $HOOK_ADDR || source $HOOK_ADDR; sleep 1\"\n\
+ if fatload mmc 0 $HOOK_ADDR $BOOT_HOOK; then\n\
+     echo find boot hook $BOOT_HOOK\n\
+-    setenv bootcmd2 $bootcmd\n\
++    setenv bootcmd_ $bootcmd\n\
+     setenv bootcmd $POST_HOOK\n\
+     exit 0\n\
+ fi\n\
+ if ext4load mmc 0 $HOOK_ADDR $BOOT_HOOK; then\n\
+     echo find boot hook $BOOT_HOOK\n\
+-    setenv bootcmd2 $bootcmd\n\
++    setenv bootcmd_ $bootcmd\n\
+     setenv bootcmd $POST_HOOK\n\
+     exit 0\n\
+ fi\n\
+ setenv BOOT_HOOK\n\
+ setenv POST_HOOK\n\
+-"
+-,-1,0);
+-}
++",-1,0);}
+ 
+ // boot from spi
+ if ( booted == 3 ) {
+ run_command_list("\n\
+-setenv DTB_SIZHEX	0x020000\n\
+-setenv DTB_OFFHEX	0x140000\n\
+-setenv SCRIPT_SIZHEX	0x008000\n\
+-setenv SCRIPT_OFFHEX	0x160000\n\
+-setenv SCRIPT_ADDR 	0x50000000\n\
+ ## sf read dtb\n\
+ sf probe 0 104000000\n\
+-echo sf read $dtb_mem_addr $DTB_OFFHEX $DTB_SIZHEX\n\
+-sf read $dtb_mem_addr $DTB_OFFHEX $DTB_SIZHEX\n\
+-echo fdt addr $dtb_mem_addr\n\
+-fdt addr $dtb_mem_addr && echo DTB activated\n\
++setenv LOADER sf read\n\
++echo $LOADER $DTB_ADDR $DTB_OFFHEX $DTB_SIZHEX\n\
++$LOADER $DTB_ADDR $DTB_OFFHEX $DTB_SIZHEX\n\
++echo fdt addr $DTB_ADDR\n\
++fdt addr $DTB_ADDR && echo DTB activated by addr $DTB_ADDR\n\
+ \n\
+ ## sf read boot script\n\
+-echo sf read $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
+-sf read $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
++echo $LOADER $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
++sf $LOADER $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
+ echo script readed from sf\n\
+-setenv bootcmd \"$POST_HOOK; script $SCRIPT_ADDR; sleep 1\"\n\
+-"
+-,-1,0);
+-}
++setenv bootcmd2 $bootcmd\n\
++setenv bootcmd \"$POST_HOOK; script $SCRIPT_ADDR || run bootcmd2; sleep 1\"\n\
++",-1,0);}
+ 
+ 
+diff --git a/board/khadas/configs/kvim2.h b/board/khadas/configs/kvim2.h
+index 072cd0d113..51552e11ba 100644
+--- a/board/khadas/configs/kvim2.h
++++ b/board/khadas/configs/kvim2.h
+@@ -585,11 +585,11 @@
+ 
+ // ## hyphop ## begin //
+ 
+-#define CONFIG_SYS_MAX_FLASH_BANKS 1
+-#define CONFIG_CMDLINE_TAG 1
+-#define CONFIG_INITRD_TAG 1
++//#define CONFIG_SYS_MAX_FLASH_BANKS 1
++//#define CONFIG_CMDLINE_TAG 1
++//#define CONFIG_INITRD_TAG 1
+ //#define CONFIG_SERIAL_TAG 1
+ //#define CONFIG_REVISION_TAG 1
+-#define CONFIG_SETUP_MEMORY_TAGS 1
++//#define CONFIG_SETUP_MEMORY_TAGS 1
+ 
+ // end //
+-- 
+2.14.1
+

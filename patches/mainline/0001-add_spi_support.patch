@@ -1,0 +1,960 @@
+From d891a8f1f9be81adaadb7b99358dc4094952cf29 Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Fri, 16 Aug 2019 18:47:34 +0300
+Subject: [PATCH] add_spi_support
+
+---
+ arch/arm/dts/meson-gxm-khadas-vim2.dts     |  14 +-
+ arch/arm/dts/meson-gxm-khadas-vim2.dts.org | 437 +++++++++++++++++++++++++++++
+ board/amlogic/aml_booted_from.c            |  45 +++
+ board/amlogic/q200/q200.c                  |  13 +-
+ cmd/Makefile                               |   3 +
+ cmd/cmd_script.c                           | 213 ++++++++++++++
+ include/configs/meson64.h                  |  14 +
+ include/configs/meson64.h.org              |  97 +++++++
+ 8 files changed, 828 insertions(+), 8 deletions(-)
+ create mode 100644 arch/arm/dts/meson-gxm-khadas-vim2.dts.org
+ create mode 100644 board/amlogic/aml_booted_from.c
+ create mode 100644 cmd/cmd_script.c
+ create mode 100644 include/configs/meson64.h.org
+
+diff --git a/arch/arm/dts/meson-gxm-khadas-vim2.dts b/arch/arm/dts/meson-gxm-khadas-vim2.dts
+index 782e9ed..dafcfc5 100644
+--- a/arch/arm/dts/meson-gxm-khadas-vim2.dts
++++ b/arch/arm/dts/meson-gxm-khadas-vim2.dts
+@@ -326,7 +326,8 @@
+ };
+ 
+ &sd_emmc_a {
+-	status = "okay";
++//	status = "okay";
++	status = "disabled";
+ 	pinctrl-0 = <&sdio_pins>;
+ 	pinctrl-names = "default";
+ 	#address-cells = <1>;
+@@ -369,7 +370,8 @@
+ 
+ /* eMMC */
+ &sd_emmc_c {
+-	status = "okay";
++//	status = "okay";
++	status = "disabled";
+ 	pinctrl-0 = <&emmc_pins>, <&emmc_ds_pins>;
+ 	pinctrl-names = "default";
+ 
+@@ -393,16 +395,16 @@
+  * Remove emmc_ds_pins from sd_emmc_c pinctrl-0 then spifc can be enabled
+  */
+ &spifc {
+-	status = "disabled";
++	status = "okay";
+ 	pinctrl-0 = <&nor_pins>;
+ 	pinctrl-names = "default";
+ 
+-	w25q32: spi-flash@0 {
++	w25q128fw: spi-flash@0 {
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+-		compatible = "winbond,w25q16", "jedec,spi-nor";
++		compatible = "winbond,w25q128fw", "jedec,spi-nor";
+ 		reg = <0>;
+-		spi-max-frequency = <3000000>;
++		spi-max-frequency = <104000000>;
+ 	};
+ };
+ 
+diff --git a/arch/arm/dts/meson-gxm-khadas-vim2.dts.org b/arch/arm/dts/meson-gxm-khadas-vim2.dts.org
+new file mode 100644
+index 0000000..782e9ed
+--- /dev/null
++++ b/arch/arm/dts/meson-gxm-khadas-vim2.dts.org
+@@ -0,0 +1,437 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright (c) 2017 Martin Blumenstingl <martin.blumenstingl@googlemail.com>.
++ * Copyright (c) 2017 BayLibre, SAS
++ * Author: Neil Armstrong <narmstrong@baylibre.com>
++ */
++
++/dts-v1/;
++
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/thermal/thermal.h>
++
++#include "meson-gxm.dtsi"
++
++/ {
++	compatible = "khadas,vim2", "amlogic,s912", "amlogic,meson-gxm";
++	model = "Khadas VIM2";
++
++	aliases {
++		serial0 = &uart_AO;
++		serial1 = &uart_A;
++		serial2 = &uart_AO_B;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	memory@0 {
++		device_type = "memory";
++		reg = <0x0 0x0 0x0 0x80000000>;
++	};
++
++	adc-keys {
++		compatible = "adc-keys";
++		io-channels = <&saradc 0>;
++		io-channel-names = "buttons";
++		keyup-threshold-microvolt = <1710000>;
++
++		button-function {
++			label = "Function";
++			linux,code = <KEY_FN>;
++			press-threshold-microvolt = <10000>;
++		};
++	};
++
++	emmc_pwrseq: emmc-pwrseq {
++		compatible = "mmc-pwrseq-emmc";
++		reset-gpios = <&gpio BOOT_9 GPIO_ACTIVE_LOW>;
++	};
++
++	gpio_fan: gpio-fan {
++		compatible = "gpio-fan";
++		gpios = <&gpio GPIODV_14 GPIO_ACTIVE_HIGH
++			 &gpio GPIODV_15 GPIO_ACTIVE_HIGH>;
++		/* Dummy RPM values since fan is optional */
++		gpio-fan,speed-map = <0 0
++				      1 1
++				      2 2
++				      3 3>;
++		#cooling-cells = <2>;
++	};
++
++	gpio-keys-polled {
++		compatible = "gpio-keys-polled";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		poll-interval = <100>;
++
++		button@0 {
++			label = "power";
++			linux,code = <KEY_POWER>;
++			gpios = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_LOW>;
++		};
++	};
++
++	hdmi-connector {
++		compatible = "hdmi-connector";
++		type = "a";
++
++		port {
++			hdmi_connector_in: endpoint {
++				remote-endpoint = <&hdmi_tx_tmds_out>;
++			};
++		};
++	};
++
++	pwmleds {
++		compatible = "pwm-leds";
++
++		power {
++			label = "vim:red:power";
++			pwms = <&pwm_AO_ab 1 7812500 0>;
++			max-brightness = <255>;
++			linux,default-trigger = "default-on";
++		};
++	};
++
++	sdio_pwrseq: sdio-pwrseq {
++		compatible = "mmc-pwrseq-simple";
++		reset-gpios = <&gpio GPIOX_6 GPIO_ACTIVE_LOW>;
++		clocks = <&wifi32k>;
++		clock-names = "ext_clock";
++	};
++
++	thermal-zones {
++		cpu-thermal {
++			polling-delay-passive = <250>; /* milliseconds */
++			polling-delay = <1000>; /* milliseconds */
++
++			thermal-sensors = <&scpi_sensors 0>;
++
++			trips {
++				cpu_alert0: cpu-alert0 {
++					temperature = <70000>; /* millicelsius */
++					hysteresis = <2000>; /* millicelsius */
++					type = "active";
++				};
++
++				cpu_alert1: cpu-alert1 {
++					temperature = <80000>; /* millicelsius */
++					hysteresis = <2000>; /* millicelsius */
++					type = "passive";
++				};
++			};
++
++			cooling-maps {
++				map0 {
++					trip = <&cpu_alert0>;
++					cooling-device = <&gpio_fan THERMAL_NO_LIMIT 1>;
++				};
++
++				map1 {
++					trip = <&cpu_alert1>;
++					cooling-device = <&gpio_fan 2 THERMAL_NO_LIMIT>;
++				};
++
++				map2 {
++					trip = <&cpu_alert1>;
++					cooling-device =
++						<&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++				};
++
++				map3 {
++					trip = <&cpu_alert1>;
++					cooling-device =
++						<&cpu4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++				};
++			};
++		};
++	};
++
++	hdmi_5v: regulator-hdmi-5v {
++		compatible = "regulator-fixed";
++
++		regulator-name = "HDMI_5V";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++
++		gpio = <&gpio GPIOH_3 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		regulator-always-on;
++	};
++
++	vcc_3v3: regulator-vcc_3v3 {
++		compatible = "regulator-fixed";
++		regulator-name = "VCC_3V3";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++	};
++
++	vddio_ao18: regulator-vddio_ao18 {
++		compatible = "regulator-fixed";
++		regulator-name = "VDDIO_AO18";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++	};
++
++	vddio_boot: regulator-vddio_boot {
++		compatible = "regulator-fixed";
++		regulator-name = "VDDIO_BOOT";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++	};
++
++	vddao_3v3: regulator-vddao_3v3 {
++		compatible = "regulator-fixed";
++		regulator-name = "VDDAO_3V3";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++	};
++
++	wifi32k: wifi32k {
++		compatible = "pwm-clock";
++		#clock-cells = <0>;
++		clock-frequency = <32768>;
++		pwms = <&pwm_ef 0 30518 0>; /* PWM_E at 32.768KHz */
++	};
++};
++
++&cec_AO {
++	status = "okay";
++	pinctrl-0 = <&ao_cec_pins>;
++	pinctrl-names = "default";
++	hdmi-phandle = <&hdmi_tx>;
++};
++
++&cpu0 {
++	#cooling-cells = <2>;
++};
++
++&cpu1 {
++	#cooling-cells = <2>;
++};
++
++&cpu2 {
++	#cooling-cells = <2>;
++};
++
++&cpu3 {
++	#cooling-cells = <2>;
++};
++
++&cpu4 {
++	#cooling-cells = <2>;
++};
++
++&cpu5 {
++	#cooling-cells = <2>;
++};
++
++&cpu6 {
++	#cooling-cells = <2>;
++};
++
++&cpu7 {
++	#cooling-cells = <2>;
++};
++
++&ethmac {
++	pinctrl-0 = <&eth_pins>;
++	pinctrl-names = "default";
++
++	/* Select external PHY by default */
++	phy-handle = <&external_phy>;
++
++	amlogic,tx-delay-ns = <2>;
++
++	/* External PHY reset is shared with internal PHY Led signals */
++	snps,reset-gpio = <&gpio GPIOZ_14 0>;
++	snps,reset-delays-us = <0 10000 1000000>;
++	snps,reset-active-low;
++
++	/* External PHY is in RGMII */
++	phy-mode = "rgmii";
++
++	status = "okay";
++};
++
++&external_mdio {
++	external_phy: ethernet-phy@0 {
++		/* Realtek RTL8211F (0x001cc916) */
++		reg = <0>;
++		interrupt-parent = <&gpio_intc>;
++		/* MAC_INTR on GPIOZ_15 */
++		interrupts = <25 IRQ_TYPE_LEVEL_LOW>;
++	};
++};
++
++&hdmi_tx {
++	status = "okay";
++	pinctrl-0 = <&hdmi_hpd_pins>, <&hdmi_i2c_pins>;
++	pinctrl-names = "default";
++	hdmi-supply = <&hdmi_5v>;
++};
++
++&hdmi_tx_tmds_port {
++	hdmi_tx_tmds_out: endpoint {
++		remote-endpoint = <&hdmi_connector_in>;
++	};
++};
++
++&i2c_A {
++	status = "okay";
++	pinctrl-0 = <&i2c_a_pins>;
++	pinctrl-names = "default";
++};
++
++&i2c_B {
++	status = "okay";
++	pinctrl-0 = <&i2c_b_pins>;
++	pinctrl-names = "default";
++
++	rtc: rtc@51 {
++		/* has to be enabled manually when a battery is connected: */
++		status = "disabled";
++		compatible = "haoyu,hym8563";
++		reg = <0x51>;
++		#clock-cells = <0>;
++		clock-frequency = <32768>;
++		clock-output-names = "xin32k";
++	};
++};
++
++&ir {
++	status = "okay";
++	pinctrl-0 = <&remote_input_ao_pins>;
++	pinctrl-names = "default";
++	linux,rc-map-name = "rc-geekbox";
++};
++
++&pwm_AO_ab {
++	status = "okay";
++	pinctrl-0 = <&pwm_ao_a_3_pins>, <&pwm_ao_b_pins>;
++	pinctrl-names = "default";
++	clocks = <&clkc CLKID_FCLK_DIV4>;
++	clock-names = "clkin0";
++};
++
++&pwm_ef {
++	status = "okay";
++	pinctrl-0 = <&pwm_e_pins>, <&pwm_f_clk_pins>;
++	pinctrl-names = "default";
++	clocks = <&clkc CLKID_FCLK_DIV4>;
++	clock-names = "clkin0";
++};
++
++&sd_emmc_a {
++	status = "okay";
++	pinctrl-0 = <&sdio_pins>;
++	pinctrl-names = "default";
++	#address-cells = <1>;
++	#size-cells = <0>;
++
++	bus-width = <4>;
++	max-frequency = <100000000>;
++
++	non-removable;
++	disable-wp;
++
++	mmc-pwrseq = <&sdio_pwrseq>;
++
++	vmmc-supply = <&vddao_3v3>;
++	vqmmc-supply = <&vddio_boot>;
++
++	brcmf: wifi@1 {
++		reg = <1>;
++		compatible = "brcm,bcm4329-fmac";
++	};
++};
++
++/* SD card */
++&sd_emmc_b {
++	status = "okay";
++	pinctrl-0 = <&sdcard_pins>;
++	pinctrl-names = "default";
++
++	bus-width = <4>;
++	cap-sd-highspeed;
++	max-frequency = <100000000>;
++	disable-wp;
++
++	cd-gpios = <&gpio CARD_6 GPIO_ACTIVE_HIGH>;
++	cd-inverted;
++
++	vmmc-supply = <&vddao_3v3>;
++	vqmmc-supply = <&vddio_boot>;
++};
++
++/* eMMC */
++&sd_emmc_c {
++	status = "okay";
++	pinctrl-0 = <&emmc_pins>, <&emmc_ds_pins>;
++	pinctrl-names = "default";
++
++	bus-width = <8>;
++	cap-sd-highspeed;
++	cap-mmc-highspeed;
++	max-frequency = <200000000>;
++	non-removable;
++	disable-wp;
++	mmc-ddr-1_8v;
++	mmc-hs200-1_8v;
++	mmc-hs400-1_8v;
++
++	mmc-pwrseq = <&emmc_pwrseq>;
++	vmmc-supply = <&vcc_3v3>;
++	vqmmc-supply = <&vddio_boot>;
++};
++
++/*
++ * EMMC_DS pin is shared between SPI NOR CS and eMMC Data Strobe
++ * Remove emmc_ds_pins from sd_emmc_c pinctrl-0 then spifc can be enabled
++ */
++&spifc {
++	status = "disabled";
++	pinctrl-0 = <&nor_pins>;
++	pinctrl-names = "default";
++
++	w25q32: spi-flash@0 {
++		#address-cells = <1>;
++		#size-cells = <1>;
++		compatible = "winbond,w25q16", "jedec,spi-nor";
++		reg = <0>;
++		spi-max-frequency = <3000000>;
++	};
++};
++
++/* This one is connected to the Bluetooth module */
++&uart_A {
++	status = "okay";
++	pinctrl-0 = <&uart_a_pins>;
++	pinctrl-names = "default";
++};
++
++/* This is brought out on the Linux_RX (18) and Linux_TX (19) pins: */
++&uart_AO {
++	status = "okay";
++	pinctrl-0 = <&uart_ao_a_pins>;
++	pinctrl-names = "default";
++};
++
++/* This is brought out on the UART_RX_AO_B (15) and UART_TX_AO_B (16) pins: */
++&uart_AO_B {
++	status = "okay";
++	pinctrl-0 = <&uart_ao_b_pins>;
++	pinctrl-names = "default";
++};
++
++&saradc {
++	status = "okay";
++	vref-supply = <&vddio_ao18>;
++};
++
++&usb0 {
++	status = "okay";
++};
+diff --git a/board/amlogic/aml_booted_from.c b/board/amlogic/aml_booted_from.c
+new file mode 100644
+index 0000000..4d62bb3
+--- /dev/null
++++ b/board/amlogic/aml_booted_from.c
+@@ -0,0 +1,45 @@
++/*
++
++## hyphop ##
++
++#= detect amlogic boot source from special register
++#/ insert next lines after => int board_late_init(void)
++
++*/
++
++#include <asm/arch-meson/gx.h>
++#define AO_SEC_GP_CFG0 GX_AO_SEC_GP_CFG0
++
++		char BOOTED[5];
++		//  0   1    2    3   4  5
++		//  res emmc nand spi sd usb // read this magic register
++		char booted=readl(AO_SEC_GP_CFG0) & 0xf;
++		sprintf(BOOTED, "%s",
++		booted == 4 ? "sd" : booted == 3 ? "spi" : booted == 1 ? "emmc" : ""
++		);
++		printf("[i] uboot BOOTED from: %u - %s\n", booted, BOOTED);
++//		setenv("BOOTED", BOOTED );
++		env_set("BOOTED", BOOTED );
++//		env_set("dhcp_boot", "dhcp; tftp 1000000 boot.scr; source 1000000" );
++		env_set("dhcp_boot", "dhcp; tftp 1000000 boot.scr; script 1000000 || source 1000000" );
++
++if ( booted != 4 ) {
++run_command_list("\n\
++setenv SCRIPT_ADDR 0x50000000\n\
++setenv BOOT_HOOK /rescue/hook.scr\n\
++setenv POST_HOOK \"script $SCRIPT_ADDR || source $SCRIPT_ADDR; sleep 1\"\n\
++if fatload mmc 0 $SCRIPT_ADDR $BOOT_HOOK; then\n\
++    echo find boot hook $BOOT_HOOK\n\
++    setenv bootcmd2 $bootcmd\n\
++    setenv bootcmd $POST_HOOK\n\
++    exit 0\n\
++fi\n\
++if ext4load mmc 0 $SCRIPT_ADDR $BOOT_HOOK; then\n\
++    echo find boot hook $BOOT_HOOK\n\
++    setenv bootcmd2 $bootcmd\n\
++    setenv bootcmd $POST_HOOK\n\
++    exit 0\n\
++fi\n"
++,-1,0);\
++
++}
+\ No newline at end of file
+diff --git a/board/amlogic/q200/q200.c b/board/amlogic/q200/q200.c
+index f1faa74..8981970 100644
+--- a/board/amlogic/q200/q200.c
++++ b/board/amlogic/q200/q200.c
+@@ -18,21 +18,29 @@
+ #define EFUSE_MAC_OFFSET	52
+ #define EFUSE_MAC_SIZE		6
+ 
++
+ int misc_init_r(void)
+ {
++
++#include "../aml_booted_from.c"
++
+ 	u8 mac_addr[EFUSE_MAC_SIZE];
+ 	char serial[EFUSE_SN_SIZE];
+ 	ssize_t len;
+ 
+ 	meson_eth_init(PHY_INTERFACE_MODE_RGMII, 0);
+ 
++	/* Reset PHY on GPIOZ_14 */
++	clrbits_le32(GX_GPIO_EN(3), BIT(14));
++	clrbits_le32(GX_GPIO_OUT(3), BIT(14));
++	mdelay(10);
++	setbits_le32(GX_GPIO_OUT(3), BIT(14));
++
+ 	if (!eth_env_get_enetaddr("ethaddr", mac_addr)) {
+ 		len = meson_sm_read_efuse(EFUSE_MAC_OFFSET,
+ 					  mac_addr, EFUSE_MAC_SIZE);
+ 		if (len == EFUSE_MAC_SIZE && is_valid_ethaddr(mac_addr))
+ 			eth_env_set_enetaddr("ethaddr", mac_addr);
+-		else
+-			meson_generate_serial_ethaddr();
+ 	}
+ 
+ 	if (!env_get("serial#")) {
+@@ -44,3 +52,4 @@ int misc_init_r(void)
+ 
+ 	return 0;
+ }
++
+diff --git a/cmd/Makefile b/cmd/Makefile
+index 58827b5..07465de 100644
+--- a/cmd/Makefile
++++ b/cmd/Makefile
+@@ -221,3 +221,6 @@ $(obj)/license_data_size.h: $(srctree)/Licenses/gpl-2.0.txt FORCE
+ 	$(call filechk,data_size)
+ 
+ CFLAGS_ethsw.o := -Wno-enum-conversion
++
++## add script
++obj-y += cmd_script.o
+diff --git a/cmd/cmd_script.c b/cmd/cmd_script.c
+new file mode 100644
+index 0000000..0b32965
+--- /dev/null
++++ b/cmd/cmd_script.c
+@@ -0,0 +1,213 @@
++
++// ## hyphop ## for khadas
++
++/*
++
++## script
++
++simple plain script run from mem without mkimage wrappers
++
++`script` is cool alternative for `autoscript` and `source` , we can
++ use one `script` command for plain script and wrapped scripts!
++
+++ https://github.com/hyphop/uboot-extra
+++ https://raw.githubusercontent.com/hyphop/uboot-extra/master/cmd_script.c
++
++## sintax and parsing
++
++```
++#!script - script must begin from this marker
++##END##  - its end marker - after this lines all strings ignored
++'\0'     - its same end marker
++72bytes  - mkimage header parsed 
++
++```
++
++script parsed by run_command_list
++
++## how to install it 
++
++just add next line to Makefile
++
++    obj-y += cmd_script.o
++
++## uboot usage
++
++    script [addr|check] [bytes] [nochk] [silent] - run script starting at addr
++        bytes - read bytes (hex) limit
++        nochk - no check #!script header
++        silent - be silent
++
++    script check && echo ok # check script cmd
++
++## uboot usage  examples
++
++    script 0x1000000				- simple run from addr 0x1000000
++    script 0x1000000 32 			- same but only fist 32 bytes
++    script 0x1000000 $filesize 			- same but limited by file size value 
++    script 0x1000000 $filesize nochk 		- same but without $!script header check
++    script 0x1000000 $filesize nochk silent	- same but silent
++
++    # tftp script usage
++    ADDR=0x1000000; tftp $ADDR test.script && script $ADDR $filesize 
++
++    # usage as files
++    ADDR=100000; ext4load mmc 1:5 $ADDR dhcp.cmd_test.script; script $ADDR $filesize
++
++    # spi flash usage
++    ADDR=100000; sf read $ADDR $SCRIPT_OFFSET $SCRIPT_BYTES; script $ADDR
++
++*/
++
++
++#include <common.h>
++#include <command.h>
++//#include <image.h>
++#include <malloc.h>
++#include <mapmem.h>
++//#include <asm/byteorder.h>
++
++int
++script (ulong addr , unsigned leng,  unsigned hdr_chk , unsigned silent)
++{
++	unsigned  len = leng;
++	void *buf;
++	
++	buf = map_sysmem(addr, 0);
++	
++	char *data;
++	char *n;
++	
++	data = (char *)buf;
++	n = data;
++
++// simple mkimage header parser
++	if ( *(n+0) == 0x27 &&
++	     *(n+1) == 0x05 &&
++	     *(n+2) == 0x19 &&
++	     *(n+3) == 0x56
++	     ) {
++
++//	size calculate
++	    unsigned int l = (*(n+14))*256 + *(n+15);
++
++	    if ( l > 8 ) l-=8;
++//	fix offest
++	    data+=72;
++	    hdr_chk=0;
++
++	    if (!silent)
++		printf ("[w] mkimage Script a:%08lx l:%u - s:%u\n", addr, len, l) ;
++
++//	fix len
++	    len=l;
++
++	}
++	
++// simple script header parser
++	if ( hdr_chk ) {
++	if ( *n++ == '#' &&
++	     *n++ == '!' &&
++	     *n++ == 's' &&
++	     *n++ == 'c' &&
++	     *n++ == 'r' &&
++	     *n++ == 'i' &&
++	     *n++ == 'p' &&
++	     *n++ == 't' ) {
++	} else {
++		if (!silent)
++		    printf ("[w] Script a:%08lx l:%u c:%u - wrong header!\n", addr, len, hdr_chk ) ;
++
++		return -1;
++
++	}
++	}
++
++	if (len < 1) {
++	    len = 1024*32;
++	}
++
++	char a = *(data + len);
++
++	*(data + len) = '\0';
++
++	char *p = strstr( data , "\n##END##" );
++	
++	if (p != NULL) {
++	    *(data + len) = a;
++	    len = p - data;
++	} else {
++	    int i = 0;
++	    while ( *n++ != '\0' ) {
++		if ( i++ >= len ) break;
++	    }
++	    *(data + len) = a;
++	    len = n - data; //len = i;
++	}
++
++	len--;
++
++	if (!silent)
++	    printf ("[#] Script a:%08lx l:%u c:%u s:%u - run\n", addr, len, hdr_chk, silent ) ;
++
++	return run_command_list(data, len, 0);
++
++//	unmap_sysmem(buf);
++
++	return 0;
++
++
++}
++
++/**************************************************/
++
++int do_script (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
++{
++	ulong addr;
++	int rcode;
++
++	if ( argc < 2 )  {
++	    printf ("[e] not defined addr\n");
++	    return -1;
++	}
++
++	unsigned leng;
++
++	char *n;
++	n = (char *)argv[1];
++
++	// just check
++	//$ script check && echo ok
++	//printf ("[i] args %s %s\n", argv[1], n);
++
++	if ( *n++  == 'c' && 
++	     *n++  == 'h' &&
++	    1
++	    ) {
++	    return 0;
++	}
++
++	addr = simple_strtoul(argv[1], NULL, 16);
++	if ( argc < 3 )  {
++	    leng = 65536/2;
++	} else { 
++	    leng = simple_strtoul(argv[2], NULL, 16);
++	}
++
++	rcode = script (addr , leng , 
++		argc > 3 ? 0 : 1,
++		argc > 4 ? 1 : 0
++	);
++
++	 
++	return rcode;
++}
++
++U_BOOT_CMD(
++	script, 5, 0,	do_script,
++	"# run plain script from memory",
++	"[addr|check] [bytes] [nochk] [silent] - run script starting at addr\n"
++	"	bytes - read bytes (hex) limit\n"
++	"	nochk - no check #!script header\n"
++	"	silent - be silent\n"
++);
+diff --git a/include/configs/meson64.h b/include/configs/meson64.h
+index f8d3eee..22e506c 100644
+--- a/include/configs/meson64.h
++++ b/include/configs/meson64.h
+@@ -94,4 +94,18 @@
+ 
+ #include <config_distro_bootcmd.h>
+ 
++// ## hyphop ## begin //
++
++#define CONFIG_SYS_MAX_FLASH_BANKS 1
++#define CONFIG_CMDLINE_TAG 1
++#define CONFIG_INITRD_TAG 1
++//#define CONFIG_SERIAL_TAG 1
++//#define CONFIG_REVISION_TAG 1
++#define CONFIG_SETUP_MEMORY_TAGS 1
++
++// end //
++
++
+ #endif /* __MESON64_CONFIG_H */
++
++
+diff --git a/include/configs/meson64.h.org b/include/configs/meson64.h.org
+new file mode 100644
+index 0000000..f8d3eee
+--- /dev/null
++++ b/include/configs/meson64.h.org
+@@ -0,0 +1,97 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++/*
++ * Configuration for Amlogic Meson 64bits SoCs
++ * (C) Copyright 2016 Beniamino Galvani <b.galvani@gmail.com>
++ */
++
++#ifndef __MESON64_CONFIG_H
++#define __MESON64_CONFIG_H
++
++/* Generic Interrupt Controller Definitions */
++#if defined(CONFIG_MESON_AXG)
++#define GICD_BASE			0xffc01000
++#define GICC_BASE			0xffc02000
++#else /* MESON GXL and GXBB */
++#define GICD_BASE			0xc4301000
++#define GICC_BASE			0xc4302000
++#endif
++
++/* For splashscreen */
++#ifdef CONFIG_DM_VIDEO
++#define CONFIG_VIDEO_BMP_RLE8
++#define CONFIG_BMP_16BPP
++#define CONFIG_BMP_24BPP
++#define CONFIG_BMP_32BPP
++#define CONFIG_SPLASH_SCREEN
++#define CONFIG_SPLASH_SCREEN_ALIGN
++#define STDOUT_CFG "vidconsole,serial"
++#else
++#define STDOUT_CFG "serial"
++#endif
++
++#ifdef CONFIG_USB_KEYBOARD
++#define STDIN_CFG "usbkbd,serial"
++#else
++#define STDIN_CFG "serial"
++#endif
++
++#define CONFIG_CPU_ARMV8
++#define CONFIG_REMAKE_ELF
++#ifndef CONFIG_ENV_SIZE
++#define CONFIG_ENV_SIZE			0x2000
++#endif
++#define CONFIG_SYS_MAXARGS		32
++#define CONFIG_SYS_MALLOC_LEN		(32 << 20)
++#define CONFIG_SYS_CBSIZE		1024
++
++#define CONFIG_SYS_SDRAM_BASE		0
++#define CONFIG_SYS_INIT_SP_ADDR		0x20000000
++#define CONFIG_SYS_LOAD_ADDR		CONFIG_SYS_TEXT_BASE
++#define CONFIG_SYS_BOOTM_LEN		(64 << 20) /* 64 MiB */
++
++/* ROM USB boot support, auto-execute boot.scr at scriptaddr */
++#define BOOTENV_DEV_ROMUSB(devtypeu, devtypel, instance) \
++	"bootcmd_romusb=" \
++		"if test \"${boot_source}\" = \"usb\" && " \
++				"test -n \"${scriptaddr}\"; then " \
++			"echo '(ROM USB boot)'; " \
++			"source ${scriptaddr}; " \
++		"fi\0"
++
++#define BOOTENV_DEV_NAME_ROMUSB(devtypeu, devtypel, instance)	\
++		"romusb "
++
++#ifdef CONFIG_CMD_USB
++#define BOOT_TARGET_DEVICES_USB(func) func(USB, usb, 0)
++#else
++#define BOOT_TARGET_DEVICES_USB(func)
++#endif
++
++#ifndef BOOT_TARGET_DEVICES
++#define BOOT_TARGET_DEVICES(func) \
++	func(ROMUSB, romusb, na)  \
++	func(MMC, mmc, 0) \
++	func(MMC, mmc, 1) \
++	func(MMC, mmc, 2) \
++	BOOT_TARGET_DEVICES_USB(func) \
++	func(PXE, pxe, na) \
++	func(DHCP, dhcp, na)
++#endif
++
++#ifndef CONFIG_EXTRA_ENV_SETTINGS
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"stdin=" STDIN_CFG "\0" \
++	"stdout=" STDOUT_CFG "\0" \
++	"stderr=" STDOUT_CFG "\0" \
++	"fdt_addr_r=0x08008000\0" \
++	"scriptaddr=0x08000000\0" \
++	"kernel_addr_r=0x08080000\0" \
++	"pxefile_addr_r=0x01080000\0" \
++	"ramdisk_addr_r=0x13000000\0" \
++	"fdtfile=amlogic/" CONFIG_DEFAULT_DEVICE_TREE ".dtb\0" \
++	BOOTENV
++#endif
++
++#include <config_distro_bootcmd.h>
++
++#endif /* __MESON64_CONFIG_H */
+-- 
+2.14.1
+

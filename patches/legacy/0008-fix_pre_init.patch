@@ -1,0 +1,74 @@
+From 4b03c4665aaee4f6a1244bc95671626b0b09e314 Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Sat, 17 Aug 2019 21:01:34 +0300
+Subject: [PATCH 8/8] fix_pre_init
+
+---
+ board/khadas/aml_booted_from.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+index 6abed7b0b9..d34bb5dcf0 100644
+--- a/board/khadas/aml_booted_from.c
++++ b/board/khadas/aml_booted_from.c
+@@ -10,19 +10,21 @@
+ 
+ run_command_list("\n\
+ # default rescue init envs\n\
++echo UBOOT_PRE_INIT\n\
+ setenv HOOK_ADDR        0x31000000\n\
++setenv ENV_ADDR         0x32000000\n\
+ setenv SCRIPT_ADDR      0x33000000\n\
+ setenv NETSCR_ADDR      0x34000000\n\
+ setenv DTB_ADDR         0x1000000\n\
++setenv DTB_ADDR2        0x2000000\n\
+ setenv DTB_SIZHEX       0x020000\n\
+ setenv DTB_OFFHEX       0x140000\n\
+ setenv SCRIPT_SIZHEX    0x008000\n\
+ setenv SCRIPT_OFFHEX    0x160000\n\
+-setenv dhcp_boot        \"dhcp; tftp $NETSCR_ADDR boot.scr; script $NETSCR_ADDR || source $NETSCR_ADDR\"\n\
++setenv dhcp_boot        \"setenv BOOTED2 dhcp; dhcp; tftp $NETSCR_ADDR boot.scr; script $NETSCR_ADDR || source $NETSCR_ADDR\"\n\
+ setenv dhcp_loop	\"while true; do; run dhcp_boot; sleep 1; done\"\n\
+ ",-1,0);
+ 
+-
+ 	char BOOTED[5];
+ 	//  0   1    2    3   4  5
+ 	//  res emmc nand spi sd usb // read this magic register
+@@ -36,6 +38,7 @@ setenv dhcp_loop	\"while true; do; run dhcp_boot; sleep 1; done\"\n\
+ 
+ // boot from not sd
+ if ( booted != 4 ) {
++// check hook
+ run_command_list("\n\
+ setenv BOOT_HOOK /rescue/hook.scr\n\
+ setenv POST_HOOK \"script $HOOK_ADDR || source $HOOK_ADDR; sleep 1\"\n\
+@@ -58,20 +61,22 @@ setenv POST_HOOK\n\
+ // boot from spi
+ if ( booted == 3 ) {
+ run_command_list("\n\
++if test \"$BOOT_HOOK\" = \"\"; then\n\
++echo \"UBOOT_PRE_INIT_SPI+$BOOT_HOOK\"\n\
+ ## sf read dtb\n\
+ sf probe 0 104000000\n\
+-setenv LOADER sf read\n\
++setenv LOADER \"sf read\"\n\
+ echo $LOADER $DTB_ADDR $DTB_OFFHEX $DTB_SIZHEX\n\
+ $LOADER $DTB_ADDR $DTB_OFFHEX $DTB_SIZHEX\n\
+-echo fdt addr $DTB_ADDR\n\
+ fdt addr $DTB_ADDR && echo DTB activated by addr $DTB_ADDR\n\
+ \n\
+ ## sf read boot script\n\
+ echo $LOADER $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
+-sf $LOADER $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
++$LOADER $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX || exit 0\n\
+ echo script readed from sf\n\
+ setenv bootcmd2 $bootcmd\n\
+ setenv bootcmd \"$POST_HOOK; script $SCRIPT_ADDR || run bootcmd2; sleep 1\"\n\
++fi\n\
+ ",-1,0);}
+ 
+ 
+-- 
+2.14.1
+
