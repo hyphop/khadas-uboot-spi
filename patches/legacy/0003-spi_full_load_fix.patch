@@ -1,7 +1,7 @@
 From 7d348d5e034b78f59f68d0ea264eba261854af07 Mon Sep 17 00:00:00 2001
 From: hyphop <email2tema@gmail.com>
 Date: Fri, 16 Aug 2019 22:48:46 +0300
-Subject: [PATCH 3/8] spi_full_load_fix
+Subject: [PATCH 3/9] spi_full_load_fix
 
 ---
  board/khadas/aml_booted_from.c | 66 ++++++++++++++++++++++++++++++++++++------

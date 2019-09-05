@@ -1,0 +1,60 @@
+#!/bin/bash
+
+## hyphop ##
+
+#= build wrapper for mailline uboot vim3
+
+#/ menuconfig
+#  savedefconfig
+#  -j14
+
+set -e
+
+P="$(dirname $0)"
+
+export PATH=$(realpath $P/../../fenix/build/toolchains/gcc-linaro-aarch64-none-elf/bin):$PATH
+export PATH=$(realpath $P/../../fenix/build/toolchains/gcc-arm-none-eabi/bin):$PATH
+
+export ARCH=arm64
+export CROSS_COMPILE=aarch64-none-elf-
+
+CMD(){
+    echo "[#] $@">&2
+    "$@"
+}
+
+for DIR in /tmp/u-boot.vim3; do
+    [ -d "$DIR" ] && break
+done
+
+[ -f $DIR/build/.config ] || {
+#    CMD make -C "$DIR" kvim2_defconfig
+    echo "[i] def config">&2
+
+}
+
+CMD make -C "$DIR" "$@"
+
+F=/tmp/uboot-legacy-aml
+F=/tmp/uboot_vim3
+
+[ -d $F ] && rm -rd $F
+[ -d $F ] || mkdir $F
+
+. $P/VIM3.inc
+
+uboot_custom_postprocess "$DIR" "$(realpath ../../fip)" "$F"
+
+cd $F
+
+mv u-boot.bin u-boot.spi.bin
+mv u-boot.bin.sd.bin u-boot.sd.bin
+rm bl* a* *.tpl *.bl2
+rm fip.bin *_new.bin *encrypt*
+
+for b in *.bin; do
+    gzip -c $b > $b.gz
+done
+
+echo "[i] output: $F">&2
+ls -l1 $F

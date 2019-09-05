@@ -1,7 +1,7 @@
 From d164175a4b35e57cbf3bc7570b747bb7a6d487f4 Mon Sep 17 00:00:00 2001
 From: hyphop <email2tema@gmail.com>
 Date: Sat, 17 Aug 2019 10:34:49 +0300
-Subject: [PATCH 6/8] fix_error
+Subject: [PATCH 6/9] fix_error
 
 ---
  board/khadas/aml_booted_from.c | 2 +-

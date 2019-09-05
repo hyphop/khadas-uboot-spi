@@ -21,7 +21,7 @@ CMD(){
     "$@"
 }
 
-for DIR in ../../fenix/u-boot; do
+for DIR in ../../u-boot-vim2; do
     [ -d "$DIR" ] && break
 done
 
@@ -31,7 +31,7 @@ done
 
 CMD make -C "$DIR" "$@"
 
-F=/tmp/uboot-legacy-aml
+F=/tmp/uboot_vim2
 
 [ -d $F ] && rm -rd $F
 [ -d $F ] || mkdir $F

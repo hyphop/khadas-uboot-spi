@@ -1,7 +1,7 @@
 From f65b795c372ab7732c34493c2660dffb3f135cf3 Mon Sep 17 00:00:00 2001
 From: hyphop <email2tema@gmail.com>
 Date: Sat, 17 Aug 2019 17:16:48 +0300
-Subject: [PATCH 7/8] reoderd
+Subject: [PATCH 7/9] reoderd
 
 ---
  board/khadas/aml_booted_from.c | 52 ++++++++++++++++++++++++------------------

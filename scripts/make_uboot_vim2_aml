@@ -21,7 +21,7 @@ CMD(){
     "$@"
 }
 
-for DIR in /tmp/u-boot; do
+for DIR in ../../fenix/u-boot; do
     [ -d "$DIR" ] && break
 done
 

@@ -1,7 +1,7 @@
 From 1d074aca33583ffe6dbcd53ff2b65bbe0a62654f Mon Sep 17 00:00:00 2001
 From: hyphop <email2tema@gmail.com>
 Date: Sat, 17 Aug 2019 08:46:08 +0300
-Subject: [PATCH 4/8] spi_ok
+Subject: [PATCH 4/9] spi_ok
 
 ---
  board/khadas/aml_booted_from.c | 48 ++++++++++++++++++++++--------------------

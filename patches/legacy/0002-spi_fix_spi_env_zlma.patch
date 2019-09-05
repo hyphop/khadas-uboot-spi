@@ -1,7 +1,7 @@
 From f8675db6605c5afa05ea76e5054e3fefa52f68ec Mon Sep 17 00:00:00 2001
 From: hyphop <email2tema@gmail.com>
 Date: Fri, 16 Aug 2019 21:59:41 +0300
-Subject: [PATCH 2/8] spi_fix_spi_env_zlma
+Subject: [PATCH 2/9] spi_fix_spi_env_zlma
 
 ---
  board/khadas/configs/kvim2.h | 19 +++++++++++++++----

@@ -1,7 +1,7 @@
 From 88500c4aec2dc7c74af584db1898f9e58cd087bc Mon Sep 17 00:00:00 2001
 From: hyphop <email2tema@gmail.com>
 Date: Fri, 16 Aug 2019 21:23:31 +0300
-Subject: [PATCH 1/8] spi_prep
+Subject: [PATCH 1/9] spi_prep
 
 ---
  board/khadas/aml_booted_from.c |  18 ++++

@@ -1,0 +1,81 @@
+From eadd6238887962190d7a804fbd1f42b22bf43358 Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Tue, 20 Aug 2019 19:27:52 +0300
+Subject: [PATCH 9/9] add_boot_prio_reformat
+
+---
+ board/khadas/aml_booted_from.c | 35 +++++++++++++++++++++--------------
+ board/khadas/configs/kvim2.h   |  4 ++++
+ 2 files changed, 25 insertions(+), 14 deletions(-)
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+index d34bb5dcf0..f64abe265c 100644
+--- a/board/khadas/aml_booted_from.c
++++ b/board/khadas/aml_booted_from.c
+@@ -23,6 +23,14 @@ setenv SCRIPT_SIZHEX    0x008000\n\
+ setenv SCRIPT_OFFHEX    0x160000\n\
+ setenv dhcp_boot        \"setenv BOOTED2 dhcp; dhcp; tftp $NETSCR_ADDR boot.scr; script $NETSCR_ADDR || source $NETSCR_ADDR\"\n\
+ setenv dhcp_loop	\"while true; do; run dhcp_boot; sleep 1; done\"\n\
++",-1,0);
++
++// detect boot prio mmc or spi
++run_command_list("\n\
++# detect boot prio\n\
++setenv TMP              0x50000000\n\
++i2c read 18 20 1 $TMP; if itest.b *$TMP == 0x01; then setenv BOOT0 mmc ; else setenv BOOT0 spi; fi;\n\
++echo \"[i] boot prio fist is: $BOOT0\"\n\
+ ",-1,0);
+ 
+ 	char BOOTED[5];
+@@ -62,20 +70,19 @@ setenv POST_HOOK\n\
+ if ( booted == 3 ) {
+ run_command_list("\n\
+ if test \"$BOOT_HOOK\" = \"\"; then\n\
+-echo \"UBOOT_PRE_INIT_SPI+$BOOT_HOOK\"\n\
+-## sf read dtb\n\
+-sf probe 0 104000000\n\
+-setenv LOADER \"sf read\"\n\
+-echo $LOADER $DTB_ADDR $DTB_OFFHEX $DTB_SIZHEX\n\
+-$LOADER $DTB_ADDR $DTB_OFFHEX $DTB_SIZHEX\n\
+-fdt addr $DTB_ADDR && echo DTB activated by addr $DTB_ADDR\n\
+-\n\
+-## sf read boot script\n\
+-echo $LOADER $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
+-$LOADER $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX || exit 0\n\
+-echo script readed from sf\n\
+-setenv bootcmd2 $bootcmd\n\
+-setenv bootcmd \"$POST_HOOK; script $SCRIPT_ADDR || run bootcmd2; sleep 1\"\n\
++    echo \"UBOOT_PRE_INIT_SPI+$BOOT_HOOK\"\n\
++    ## sf read dtb\n\
++    sf probe 0 104000000\n\
++    setenv LOADER \"sf read\"\n\
++    echo $LOADER $DTB_ADDR $DTB_OFFHEX $DTB_SIZHEX\n\
++    $LOADER $DTB_ADDR $DTB_OFFHEX $DTB_SIZHEX\n\
++    fdt addr $DTB_ADDR && echo DTB activated by addr $DTB_ADDR\n\
++    ## sf read boot script\n\
++    echo $LOADER $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX\n\
++    $LOADER $SCRIPT_ADDR $SCRIPT_OFFHEX $SCRIPT_SIZHEX || exit 0\n\
++    echo script readed from sf\n\
++    setenv bootcmd2 $bootcmd\n\
++    setenv bootcmd \"$POST_HOOK; script $SCRIPT_ADDR || run bootcmd2; sleep 1\"\n\
+ fi\n\
+ ",-1,0);}
+ 
+diff --git a/board/khadas/configs/kvim2.h b/board/khadas/configs/kvim2.h
+index 51552e11ba..681ec76521 100644
+--- a/board/khadas/configs/kvim2.h
++++ b/board/khadas/configs/kvim2.h
+@@ -441,6 +441,10 @@
+ 	#define CONFIG_USB_STORAGE      1
+ 	#define CONFIG_USB_XHCI		1
+ 	#define CONFIG_USB_XHCI_AMLOGIC_GXL 1
++//
++	#define CONFIG_MUSB_HDC 1
++	#define CONFIG_MUSB_UDD 1
++//
+ #endif //#if defined(CONFIG_CMD_USB)
+ 
+ //UBOOT fastboot config
+-- 
+2.14.1
+
