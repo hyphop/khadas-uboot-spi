@@ -1,0 +1,101 @@
+From fdd5550f0215b42520b83e66f392857f22b6a039 Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Fri, 27 Sep 2019 06:09:11 +0300
+Subject: [PATCH] add boot_from indent
+
+---
+ board/khadas/aml_booted_from.c | 21 +++++++++++++++++++++
+ board/khadas/kvim/kvim.c       |  4 ++++
+ board/khadas/kvim2/kvim2.c     |  3 +++
+ board/khadas/kvim3/kvim3.c     |  3 +++
+ board/khadas/kvim3l/kvim3l.c   |  3 +++
+ 5 files changed, 34 insertions(+)
+ create mode 100644 board/khadas/aml_booted_from.c
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+new file mode 100644
+index 0000000000..b04fd2fd14
+--- /dev/null
++++ b/board/khadas/aml_booted_from.c
+@@ -0,0 +1,21 @@
++/*
++
++## hyphop ##
++
++#=	special hooks 
++#= detect amlogic boot source from special register
++#/ insert next lines after => int board_late_init(void)
++
++*/
++
++	char BOOTED[5];
++	//  0   1    2    3   4  5
++	//  res emmc nand spi sd usb // read this magic register
++	char booted=readl(AO_SEC_GP_CFG0) & 0xf;
++	sprintf(BOOTED, "%s",
++	booted == 4 ? "sd" : booted == 3 ? "spi" : booted == 1 ? "emmc" : ""
++	);
++	printf("[i] uboot BOOTED from: %u - %s\n", booted, BOOTED);
++	setenv("BOOTED", BOOTED );
++
++
+diff --git a/board/khadas/kvim/kvim.c b/board/khadas/kvim/kvim.c
+index 2359800e83..b87ed89981 100644
+--- a/board/khadas/kvim/kvim.c
++++ b/board/khadas/kvim/kvim.c
+@@ -522,6 +522,10 @@ int check_vref(void)
+ }
+ 
+ int board_late_init(void){
++
++#include "../aml_booted_from.c"
++
++
+ 	run_command("if itest ${firstboot} == 1; then "\
+ 	"defenv_reserv;setenv firstboot 1; setenv upgrade_step 2; saveenv; fi;", 0);
+ 
+diff --git a/board/khadas/kvim2/kvim2.c b/board/khadas/kvim2/kvim2.c
+index 18f2334134..0dc0db13b7 100644
+--- a/board/khadas/kvim2/kvim2.c
++++ b/board/khadas/kvim2/kvim2.c
+@@ -494,6 +494,9 @@ U_BOOT_CMD(hdmi_init, CONFIG_SYS_MAXARGS, 0, do_hdmi_init,
+ int board_late_init(void){
+ 	int ret;
+ 
++#include "../aml_booted_from.c"
++
++
+ 	//update env before anyone using it
+ 	run_command("get_rebootmode; echo reboot_mode=${reboot_mode}; "\
+ 			"if test ${reboot_mode} = factory_reset; then "\
+diff --git a/board/khadas/kvim3/kvim3.c b/board/khadas/kvim3/kvim3.c
+index e669d538be..1931d12e91 100644
+--- a/board/khadas/kvim3/kvim3.c
++++ b/board/khadas/kvim3/kvim3.c
+@@ -693,6 +693,9 @@ int board_init(void)
+ #ifdef CONFIG_BOARD_LATE_INIT
+ int board_late_init(void)
+ {
++
++#include "../aml_booted_from.c"
++
+ 		TE(__func__);
+ 		//update env before anyone using it
+ 		run_command("get_rebootmode; echo reboot_mode=${reboot_mode}; "\
+diff --git a/board/khadas/kvim3l/kvim3l.c b/board/khadas/kvim3l/kvim3l.c
+index 26c9140d3d..771e7f306c 100644
+--- a/board/khadas/kvim3l/kvim3l.c
++++ b/board/khadas/kvim3l/kvim3l.c
+@@ -673,6 +673,9 @@ int board_init(void)
+ #ifdef CONFIG_BOARD_LATE_INIT
+ int board_late_init(void)
+ {
++
++#include "../aml_booted_from.c"
++
+ 	TE(__func__);
+ 		//update env before anyone using it
+ 		run_command("get_rebootmode; echo reboot_mode=${reboot_mode}; "\
+-- 
+2.14.1
+

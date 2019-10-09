@@ -1,0 +1,16 @@
+#!/bin/sh
+
+## hyphop ##
+
+DST=../../u-boot-vim1
+
+CMD() {
+    echo "[i] $@">&2
+    $@
+}
+
+git clone https://github.com/khadas/u-boot.git --branch khadas-vims-v2015.01 --single-branch $DST
+
+
+
+

@@ -1,0 +1,308 @@
+From d9ea8dd987a991ce796c0b6a08786f1d4e924b0a Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Sun, 29 Sep 2019 10:34:23 +0300
+Subject: [PATCH 3/3] booted fixes + gpios + script
+
+---
+ board/khadas/aml_booted_from.c | 25 +++++++++++++++
+ board/khadas/configs/kvim.h    |  4 +++
+ board/khadas/configs/kvim2.h   |  2 ++
+ board/khadas/configs/kvim3.h   |  2 ++
+ board/khadas/configs/kvim3l.h  |  2 ++
+ common/cmd_gpio.c              | 16 ++++++++++
+ common/cmd_script.c            | 71 +++++++++++++++++++++++++-----------------
+ 7 files changed, 94 insertions(+), 28 deletions(-)
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+index b04fd2fd14..b6cddce600 100644
+--- a/board/khadas/aml_booted_from.c
++++ b/board/khadas/aml_booted_from.c
+@@ -19,3 +19,28 @@
+ 	setenv("BOOTED", BOOTED );
+ 
+ 
++// ## hyphop ##
++// read button buttons
++
++#include <asm/saradc.h>
++
++//	need activate it before
++        saradc_enable();
++	char CMD[256];
++	sprintf(CMD, "setenv KEY_P ; setenv KEY_F; if gpio input %s silent; then setenv KEY_P 1 ; fi",
++	    GPIO_PWR_KEY );
++
++	run_command( CMD, 0);
++
++	int val = get_adc_sample_gxbb( CONFIG_SARADC_CH ); // channel 2 
++
++	if ( val > 500 ) {
++	    // not pressed
++	    setenv("KEY_F","");
++	} else { 
++	    // key pressed
++	    setenv("KEY_F","1");
++	}
++
++	run_command("echo \"[i] KEYS PRW: $KEY_P MCU: $KEY_F",0);
++
+diff --git a/board/khadas/configs/kvim.h b/board/khadas/configs/kvim.h
+index cc6538dfaf..195af533b6 100644
+--- a/board/khadas/configs/kvim.h
++++ b/board/khadas/configs/kvim.h
+@@ -54,6 +54,8 @@
+ /* config saradc*/
+ #define CONFIG_CMD_SARADC 1
+ 
++#define CONFIG_SARADC_CH  0
++
+ /*config irblaster*/
+ #define CONFIG_CMD_IRBLASTER 1
+ 
+@@ -69,6 +71,8 @@
+ /* support ext4*/
+ #define CONFIG_CMD_EXT4 1
+ 
++#define GPIO_PWR_KEY "GPIOAO_2"
++
+ /* Bootloader Control Block function
+    That is used for recovery and the bootloader to talk to each other
+   */
+diff --git a/board/khadas/configs/kvim2.h b/board/khadas/configs/kvim2.h
+index 471a473327..2678763a1a 100644
+--- a/board/khadas/configs/kvim2.h
++++ b/board/khadas/configs/kvim2.h
+@@ -48,6 +48,8 @@
+ #define CONFIG_BT_WAKEUP
+ #define CONFIG_INSTABOOT
+ 
++#define GPIO_PWR_KEY "GPIOAO_2"
++
+ /* Khadas commands */
+ #define CONFIG_KHADAS_KBI 1
+ #define CONFIG_KHADAS_CFGLOAD 1
+diff --git a/board/khadas/configs/kvim3.h b/board/khadas/configs/kvim3.h
+index a9774a93ca..657e4ad63b 100644
+--- a/board/khadas/configs/kvim3.h
++++ b/board/khadas/configs/kvim3.h
+@@ -56,6 +56,8 @@
+ /* SMP Definitinos */
+ #define CPU_RELEASE_ADDR		secondary_boot_func
+ 
++#define GPIO_PWR_KEY "GPIOAO_7"
++
+ /* config saradc*/
+ #define CONFIG_CMD_SARADC 1
+ #define CONFIG_SARADC_CH  2
+diff --git a/board/khadas/configs/kvim3l.h b/board/khadas/configs/kvim3l.h
+index 0cc52a7b4f..776441342c 100644
+--- a/board/khadas/configs/kvim3l.h
++++ b/board/khadas/configs/kvim3l.h
+@@ -42,6 +42,8 @@
+ #define CONFIG_KHADAS_CFGLOAD 1
+ #define CONFIG_KHADAS_SCRIPT 1
+ 
++#define GPIO_PWR_KEY "GPIOAO_7"
++
+ #define CONFIG_TCA6408 1
+ #define CONFIG_POWER_FUSB302 1
+ 
+diff --git a/common/cmd_gpio.c b/common/cmd_gpio.c
+index eec711bb0a..c8e1c7a2f3 100644
+--- a/common/cmd_gpio.c
++++ b/common/cmd_gpio.c
+@@ -205,12 +205,28 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ 		}
+ 		gpio_direction_output(gpio, value);
+ 	}
++
++
++//	no need output if ask
++	if (argc < 2)
+ 	printf("gpio: pin %s (gpio %i) value is %lu\n",
+ 		str_gpio, gpio, value);
+ 
+ 	if (ret != -EBUSY)
+ 		gpio_free(gpio);
+ 
++	// return value via variable
++
++//	char cmd[64];
++//    	sprintf(cmd, "gpio_val=%lu", value);
++//	run_command(cmd,0);
++
++	// return value via env
++
++//	char val[1];
++//	sprintf(val, "%lu", value);
++//	setenv("gpio_val", val);
++
+ 	return value;
+ }
+ 
+diff --git a/common/cmd_script.c b/common/cmd_script.c
+index 2ab538be79..1854326ec3 100644
+--- a/common/cmd_script.c
++++ b/common/cmd_script.c
+@@ -7,50 +7,49 @@
+ 
+ simple plain script run from mem without mkimage wrappers
+ 
+-`script` is cool alternative for `autoscript` and `source`
+-simle usage without mkimage
++`script` is cool alternative for `autoscript` and `source` , we can
++ use one `script` command for plain script and wrapped scripts!
+ 
+ + https://github.com/hyphop/uboot-extra
+-+ wget https://raw.githubusercontent.com/hyphop/uboot-extra/master/cmd_script.c
+++ https://raw.githubusercontent.com/hyphop/uboot-extra/master/cmd_script.c
+ 
+-# sintax and parsing
++## sintax and parsing
+ 
+ ```
+ #!script - script must begin from this marker
+ ##END##  - its end marker - after this lines all strings ignored
+ '\0'     - its same end marker
++72bytes  - mkimage header parsed 
++
+ ```
+ 
+ script parsed by run_command_list
+ 
+-# features
+-
+-we can use same `script` cmd for wrapped scripts with 72 bytes mkimage header
+-which parsed by `source` or `autoscript`
+-
+-# how to install it
++## how to install it 
+ 
+ just add next line to Makefile
+ 
+     obj-y += cmd_script.o
+ 
+-# uboot usage
++## uboot usage
+ 
+-    script [addr] [bytes] [nochk] [silent] - run script starting at addr
++    script [addr|check] [bytes] [nochk] [silent] - run script starting at addr
+         bytes - read bytes (hex) limit
+         nochk - no check #!script header
+         silent - be silent
+ 
+-# uboot usage  examples
++    script check && echo ok # check script cmd
++
++## uboot usage  examples
+ 
+     script 0x1000000				- simple run from addr 0x1000000
+     script 0x1000000 32 			- same but only fist 32 bytes
+-    script 0x1000000 $filesize 			- same but limited by file size value
+-    script 0x1000000 $filesize nochk 		- same but without header check
++    script 0x1000000 $filesize 			- same but limited by file size value 
++    script 0x1000000 $filesize nochk 		- same but without $!script header check
+     script 0x1000000 $filesize nochk silent	- same but silent
+ 
+     # tftp script usage
+-    ADDR=0x1000000; tftp $ADDR test.script && script $ADDR $filesize
++    ADDR=0x1000000; tftp $ADDR test.script && script $ADDR $filesize 
+ 
+     # usage as files
+     ADDR=100000; ext4load mmc 1:5 $ADDR dhcp.cmd_test.script; script $ADDR $filesize
+@@ -63,21 +62,23 @@ just add next line to Makefile
+ 
+ #include <common.h>
+ #include <command.h>
+-#include <image.h>
++//#include <image.h>
+ #include <malloc.h>
+-#include <asm/byteorder.h>
++//mainline
++#include <mapmem.h>
++//#include <asm/byteorder.h>
+ 
+ int
+ script (ulong addr , unsigned leng,  unsigned hdr_chk , unsigned silent)
+ {
+ 	unsigned  len = leng;
+ 	void *buf;
+-
++	
+ 	buf = map_sysmem(addr, 0);
+-
++	
+ 	char *data;
+ 	char *n;
+-
++	
+ 	data = (char *)buf;
+ 	n = data;
+ 
+@@ -103,7 +104,7 @@ script (ulong addr , unsigned leng,  unsigned hdr_chk , unsigned silent)
+ 	    len=l;
+ 
+ 	}
+-
++	
+ // simple script header parser
+ 	if ( hdr_chk ) {
+ 	if ( *n++ == '#' &&
+@@ -132,7 +133,7 @@ script (ulong addr , unsigned leng,  unsigned hdr_chk , unsigned silent)
+ 	*(data + len) = '\0';
+ 
+ 	char *p = strstr( data , "\n##END##" );
+-
++	
+ 	if (p != NULL) {
+ 	    *(data + len) = a;
+ 	    len = p - data;
+@@ -173,26 +174,40 @@ int do_script (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ 
+ 	unsigned leng;
+ 
++	char *n;
++	n = (char *)argv[1];
++
++	// just check
++	//$ script check && echo ok
++	//printf ("[i] args %s %s\n", argv[1], n);
++
++	if ( *n++  == 'c' && 
++	     *n++  == 'h' &&
++	    1
++	    ) {
++	    return 0;
++	}
++
+ 	addr = simple_strtoul(argv[1], NULL, 16);
+ 	if ( argc < 3 )  {
+ 	    leng = 65536/2;
+-	} else {
++	} else { 
+ 	    leng = simple_strtoul(argv[2], NULL, 16);
+ 	}
+ 
+-	rcode = script (addr , leng ,
++	rcode = script (addr , leng , 
+ 		argc > 3 ? 0 : 1,
+ 		argc > 4 ? 1 : 0
+ 	);
+ 
+-
++	 
+ 	return rcode;
+ }
+ 
+ U_BOOT_CMD(
+ 	script, 5, 0,	do_script,
+-	"run plain script from memory\n",
+-	"[addr] [bytes] [nochk] [silent] - run script starting at addr\n"
++	"# run plain script from memory",
++	"[addr|check] [bytes] [nochk] [silent] - run script starting at addr\n"
+ 	"	bytes - read bytes (hex) limit\n"
+ 	"	nochk - no check #!script header\n"
+ 	"	silent - be silent\n"
+-- 
+2.14.1
+

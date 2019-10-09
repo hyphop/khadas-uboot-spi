@@ -1,0 +1,48 @@
+From e66625f7e147f32d0cf6c14bdb1b426656f0ec2d Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Sun, 29 Sep 2019 13:07:56 +0300
+Subject: [PATCH 4/4] autoboot + rescue
+
+---
+ board/khadas/aml_booted_from.c |  5 +++++
+ common/autoboot.c              | 11 +++++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/board/khadas/aml_booted_from.c b/board/khadas/aml_booted_from.c
+index b6cddce600..2dfc0be2d7 100644
+--- a/board/khadas/aml_booted_from.c
++++ b/board/khadas/aml_booted_from.c
+@@ -44,3 +44,8 @@
+ 
+ 	run_command("echo \"[i] KEYS PRW: $KEY_P MCU: $KEY_F",0);
+ 
++// setup rescuecmd for autoboot hook
++
++	setenv("rescuecmd", "echo RESCUE_MODE; for m in 0 1 2; do fatload mmc $m 100000 rescue/rescue.cmd && setenv devnum $m; script 100000; done; echo RESCUE_DHCP; dhcp ; setenv BOOTED2 dhcp ; tftp 1000000 boot.cmd ; script 1000000;;;" );
++
++
+diff --git a/common/autoboot.c b/common/autoboot.c
+index 772d603838..138656bcc5 100644
+--- a/common/autoboot.c
++++ b/common/autoboot.c
+@@ -295,6 +295,17 @@ const char *bootdelay_process(void)
+ #endif /* CONFIG_BOOTCOUNT_LIMIT */
+ 		s = getenv("bootcmd");
+ 
++// hyphop // rescue
++
++	char *ss;
++	ss = getenv("KEY_F");
++	if ( ss ) {
++	    ss = getenv("rescuecmd");
++	    if ( ss ) s = ss;
++	}
++
++///////////////////
++
+ 	process_fdt_options(gd->fdt_blob);
+ 	stored_bootdelay = bootdelay;
+ 
+-- 
+2.14.1
+

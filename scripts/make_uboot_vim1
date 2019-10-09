@@ -28,19 +28,19 @@ for DIR in ../../u-boot-vim1; do
 done
 
 [ -f $DIR/build/.config ] || {
-    CMD make -C "$DIR" kvim2_defconfig
+    CMD make -C "$DIR" kvim_defconfig
 }
 
 CMD make -C "$DIR" "$@"
 
 #exit 0
 
-F=/tmp/uboot_vim2
+F=/tmp/uboot_vim1
 
 [ -d $F ] && rm -rf $F
 [ -d $F ] || mkdir $F
 
-. $P/VIM2.inc
+. $P/VIM1.inc
 
 echo "[i] post process">&2
 
