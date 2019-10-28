@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # UBOOT_DIR FIP FIP_BUILD
 
 CMD(){
@@ -41,6 +43,8 @@ uboot_custom_postprocess() {
 	export_variables
 
 	CUR_SOC=${CONFIG_SYS_SOC}
+
+	echo "[i] CUR_SOC $CUR_SOC"
 
 	if [ "y" == "${CONFIG_NEED_BL32}" ]; then
 		BLX_NEEDFUL[3]="true"

@@ -23,19 +23,19 @@ CMD(){
     "$@"
 }
 
-for DIR in ../../u-boot-vim3; do
+for DIR in ../../u-boot-vim3l; do
     [ -d "$DIR" ] && break
 done
 
 [ -f $DIR/build/.config ] || {
-    CMD make -C "$DIR" kvim3_defconfig
+    CMD make -C "$DIR" kvim3l_defconfig
 }
 
 CMD make -C "$DIR" "$@"
 
 #exit 0
 
-F=/tmp/uboot_vim3
+F=/tmp/uboot_vim3l
 
 [ -d $F ] && rm -rf $F
 [ -d $F ] || mkdir $F
