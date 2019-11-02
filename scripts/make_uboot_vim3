@@ -59,3 +59,10 @@ done
 
 echo "[i] output: $F">&2
 ls -l1 $F
+
+
+F2=/tmp/uboot_vims
+[ -d $F2 ] || mkdir $F2
+
+cp u-boot.sd.bin $F2/u-boot.VIM3.sd.bin
+cp u-boot.spi.bin $F2/u-boot.VIM3.spi.bin

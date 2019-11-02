@@ -1,0 +1,28 @@
+#!/bin/sh
+
+## hyphop ##
+
+[ -d ../../u-boot-vims/build ] && 
+    rm -rf ../../u-boot-vims/build
+
+
+./make_uboot_vim1
+
+[ -d ../../u-boot-vims/build ] && 
+    rm -rf ../../u-boot-vims/build
+
+
+./make_uboot_vim2
+
+[ -d ../../u-boot-vims/build ] && 
+    rm -rf ../../u-boot-vims/build
+
+
+./make_uboot_vim3
+
+[ -d ../../u-boot-vims/build ] && 
+    rm -rf ../../u-boot-vims/build
+
+
+./make_uboot_vim3l
+
