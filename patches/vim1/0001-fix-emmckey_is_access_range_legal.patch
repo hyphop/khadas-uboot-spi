@@ -1,0 +1,30 @@
+From 6ab671a0b4d9e012dc2f7073d885d04edb6fdb7c Mon Sep 17 00:00:00 2001
+From: hyphop <email2tema@gmail.com>
+Date: Tue, 19 Nov 2019 06:54:49 +0300
+Subject: [PATCH] fix emmckey_is_access_range_legal
+
+---
+ drivers/mmc/mmc.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mmc/mmc.c b/drivers/mmc/mmc.c
+index a614cf439a..43b0c3ca52 100644
+--- a/drivers/mmc/mmc.c
++++ b/drivers/mmc/mmc.c
+@@ -323,8 +323,11 @@ ulong mmc_bread(int dev_num, lbaint_t start, lbaint_t blkcnt, void *dst)
+ #endif
+ 		return 0;
+ 	}
+-	if (!emmckey_is_access_range_legal(mmc, start, blkcnt))
+-		return 0;
++
++// ## hyphop ##
++//	if (!emmckey_is_access_range_legal(mmc, start, blkcnt))
++//		return 0;
++
+ #ifndef MMC_HS400_MODE
+ 	if (mmc_set_blocklen(mmc, mmc->read_bl_len))
+ 		return 0;
+-- 
+2.14.1
+

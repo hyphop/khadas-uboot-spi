@@ -2,6 +2,8 @@
 
 ## hyphop ##
 
+    rm -rf ../../u-boot-vims/build
+
 [ -d ../../u-boot-vims/build ] && 
     rm -rf ../../u-boot-vims/build
 
