@@ -1,6 +1,9 @@
 # make mainline uboot VIM1 VIM2 VIM3 VIM3L
 
-    git clone https://github.com/hyphop/fenix/tree/hyphop
+https://github.com/hyphop/fenix/tree/hyphop
+
+    git clone https://github.com/hyphop/fenix.git
+    git checkout hyphop
     cd fenix
     ./scripts/make_uboots.sh
 
