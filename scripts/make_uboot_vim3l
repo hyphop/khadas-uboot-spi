@@ -10,6 +10,8 @@
 
 set -e
 
+VIM=VIM3L
+
 P=$(dirname $0)
 
 export PATH=$PWD/../../fenix/build/toolchains/gcc-linaro-aarch64-none-elf/bin:$PATH
@@ -35,6 +37,8 @@ CMD make -C "$DIR" "$@"
 
 #exit 0
 
+DIR="$(realpath $DIR)"
+
 F=/tmp/uboot_vim3l
 
 [ -d $F ] && rm -rf $F
@@ -53,9 +57,9 @@ mv u-boot.bin.sd.bin u-boot.sd.bin
 rm bl* a* *.tpl *.bl2
 rm fip.bin *_new.bin *encrypt*
 
-for b in *.bin; do
-    gzip -c $b > $b.gz
-done
+#for b in *.bin; do
+#    gzip -c $b > $b.gz
+#done
 
 echo "[i] output: $F">&2
 ls -l1 $F
@@ -64,5 +68,6 @@ ls -l1 $F
 F2=/tmp/uboot_vims
 [ -d $F2 ] || mkdir $F2
 
-cp u-boot.sd.bin $F2/u-boot.VIM3L.sd.bin
-cp u-boot.spi.bin $F2/u-boot.VIM3L.spi.bin
+cp u-boot.sd.bin $F2/u-boot.$VIM.sd.bin
+cp u-boot.spi.bin $F2/u-boot.$VIM.spi.bin
+gzip -c $DIR/build/u-boot.bin > $F2/u-boot.$VIM.bin.gz
